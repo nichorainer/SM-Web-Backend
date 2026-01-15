@@ -1,0 +1,21 @@
+# Go
+bin/
+build/
+dist/
+*.exe
+*.out
+
+# Node/Frontend (if present)
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Editor/OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Env & secrets
+.env
+.env.*
