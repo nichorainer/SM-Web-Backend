@@ -11,7 +11,7 @@ import (
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/products"
-	"github.com/yourorg/backend-go/internal/handlers"
+	// "github.com/yourorg/backend-go/internal/handlers"
 )
 
 // mount
@@ -38,9 +38,9 @@ func (app *application) mount() http.Handler {
 	productHandler := products.NewHandler(productService)
 	r.Get("/products", productHandler.ListProducts)
 
-	r.Get("/orders/{id}", server.GetOrderByID)
-	r.Post("/product", server.CreateProduct)
-	r.Get("/products/{id}", server.GetProductByID)
+	// r.Get("/orders/{id}", server.GetOrderByID)
+	// r.Post("/product", server.CreateProduct)
+	// r.Get("/products/{id}", server.GetProductByID)
 
 	return r 
 }
