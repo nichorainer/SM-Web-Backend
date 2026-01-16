@@ -8,8 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
+
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/products"
+	"github.com/yourorg/backend-go/internal/handlers"
 )
 
 // mount
@@ -35,6 +37,10 @@ func (app *application) mount() http.Handler {
 	productService := products.NewService(repo.New(app.db))
 	productHandler := products.NewHandler(productService)
 	r.Get("/products", productHandler.ListProducts)
+
+	r.Get("/orders/{id}", server.GetOrderByID)
+	r.Post("/product", server.CreateProduct)
+	r.Get("/products/{id}", server.GetProductByID)
 
 	return r 
 }
