@@ -9,8 +9,76 @@ import (
 	"context"
 )
 
+const createOrder = `-- name: CreateOrder :one
+INSERT INTO orders (
+  customer_id
+) VALUES ($1) RETURNING id, customer_id, created_at
+`
+
+func (q *Queries) CreateOrder(ctx context.Context, customerID int64) (Order, error) {
+	row := q.db.QueryRow(ctx, createOrder, customerID)
+	var i Order
+	err := row.Scan(&i.ID, &i.CustomerID, &i.CreatedAt)
+	return i, err
+}
+
+const createOrderItem = `-- name: CreateOrderItem :one
+INSERT INTO order_items (order_id, product_id, quantity, price_cents)
+VALUES ($1, $2, $3, $4) RETURNING id, order_id, product_id, quantity, price_cents
+`
+
+type CreateOrderItemParams struct {
+	OrderID    int64 `json:"order_id"`
+	ProductID  int64 `json:"product_id"`
+	Quantity   int32 `json:"quantity"`
+	PriceCents int32 `json:"price_cents"`
+}
+
+func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
+	row := q.db.QueryRow(ctx, createOrderItem,
+		arg.OrderID,
+		arg.ProductID,
+		arg.Quantity,
+		arg.PriceCents,
+	)
+	var i OrderItem
+	err := row.Scan(
+		&i.ID,
+		&i.OrderID,
+		&i.ProductID,
+		&i.Quantity,
+		&i.PriceCents,
+	)
+	return i, err
+}
+
+const findProductByID = `-- name: FindProductByID :one
+SELECT
+  id, name, price_in_centers, quantity, created_at
+FROM
+  products
+WHERE
+  id = $1
+`
+
+func (q *Queries) FindProductByID(ctx context.Context, id int64) (Product, error) {
+	row := q.db.QueryRow(ctx, findProductByID, id)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PriceInCenters,
+		&i.Quantity,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listProducts = `-- name: ListProducts :many
-SELECT id, name, price_in_idr, quantity, created_at FROM products
+SELECT
+  id, name, price_in_centers, quantity, created_at
+FROM
+  products
 `
 
 func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
@@ -25,7 +93,7 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.PriceInIdr,
+			&i.PriceInCenters,
 			&i.Quantity,
 			&i.CreatedAt,
 		); err != nil {

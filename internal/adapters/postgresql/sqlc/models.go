@@ -8,10 +8,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Product struct {
+type Order struct {
 	ID         int64              `json:"id"`
-	Name       string             `json:"name"`
-	PriceInIdr int32              `json:"price_in_idr"`
-	Quantity   int32              `json:"quantity"`
+	CustomerID int64              `json:"customer_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
+type OrderItem struct {
+	ID         int64 `json:"id"`
+	OrderID    int64 `json:"order_id"`
+	ProductID  int64 `json:"product_id"`
+	Quantity   int32 `json:"quantity"`
+	PriceCents int32 `json:"price_cents"`
+}
+
+type Product struct {
+	ID             int64              `json:"id"`
+	Name           string             `json:"name"`
+	PriceInCenters int32              `json:"price_in_centers"`
+	Quantity       int32              `json:"quantity"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
