@@ -40,3 +40,14 @@ func (h *handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 
 	json.Write(w, http.StatusCreated, createdOrder)
 }
+
+func (h *handler) GetOrders(w http.ResponseWriter, r *http.Request) { 
+	orders, err := h.service.ListOrders(r.Context()) 
+	if err != nil 
+	{ 
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError) 
+		return 
+	} 
+	json.Write(w, http.StatusOK, orders) 
+}
