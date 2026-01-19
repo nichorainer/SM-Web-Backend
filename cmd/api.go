@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
-	"github.com/yourorg/backend-go/internal/products"
-	"github.com/yourorg/backend-go/internal/orders"
+	"github.com/yourorg/backend-go/internal/handlers"
+	
 )
 
 // mount
@@ -33,15 +33,28 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("all good"))
 	})
 
-	// products routes
-	productService := products.NewService(repo.New(app.db))
-	productHandler := products.NewHandler(productService)
-	r.Get("/products", productHandler.ListProducts)
+	server := handlers.Server{
+    	Repo: repo.New(app.db),
+  	}
 
-	// orders routes
-	orderService := orders.NewService(repo.New(app.db), app.db)
-	ordersHandler := orders.NewHandler(orderService)
-	r.Post("/orders", ordersHandler.PlaceOrder)
+
+	// Products
+	r.Get("/products", server.ListProducts)
+	r.Get("/products/{id}", server.GetProductByID)
+	r.Post("/product", server.CreateProduct)
+
+	// Orders
+	r.Get("/orders/{id}", server.GetOrderByID)
+
+	// // products routes
+	// productService := products.NewService(repo.New(app.db))
+	// productHandler := products.NewHandler(productService)
+	// r.Get("/products", productHandler.ListProducts)
+
+	// // orders routes
+	// orderService := orders.NewService(repo.New(app.db), app.db)
+	// ordersHandler := orders.NewHandler(orderService)
+	// r.Post("/orders", ordersHandler.PlaceOrder)
 
 	return r 
 }

@@ -7,78 +7,120 @@ package repo
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createOrder = `-- name: CreateOrder :one
-INSERT INTO orders (
-  customer_id
-) VALUES ($1) RETURNING id, customer_id, created_at
+const addOrderItem = `-- name: AddOrderItem :exec
+INSERT INTO order_items (order_id, product_id, quantity)
+VALUES ($1, $2, $3)
 `
 
-func (q *Queries) CreateOrder(ctx context.Context, customerID int64) (Order, error) {
+type AddOrderItemParams struct {
+	OrderID   int32 `json:"order_id"`
+	ProductID int32 `json:"product_id"`
+	Quantity  int32 `json:"quantity"`
+}
+
+func (q *Queries) AddOrderItem(ctx context.Context, arg AddOrderItemParams) error {
+	_, err := q.db.Exec(ctx, addOrderItem, arg.OrderID, arg.ProductID, arg.Quantity)
+	return err
+}
+
+const createOrder = `-- name: CreateOrder :one
+INSERT INTO orders (customer_id)
+VALUES ($1)
+RETURNING id, customer_id, created_at
+`
+
+func (q *Queries) CreateOrder(ctx context.Context, customerID int32) (Order, error) {
 	row := q.db.QueryRow(ctx, createOrder, customerID)
 	var i Order
 	err := row.Scan(&i.ID, &i.CustomerID, &i.CreatedAt)
 	return i, err
 }
 
-const createOrderItem = `-- name: CreateOrderItem :one
-INSERT INTO order_items (order_id, product_id, quantity, price_cents)
-VALUES ($1, $2, $3, $4) RETURNING id, order_id, product_id, quantity, price_cents
+const createProduct = `-- name: CreateProduct :one
+INSERT INTO products (name, price_in_idr, quantity)
+VALUES ($1, $2, $3)
+RETURNING id, name, price_in_idr, quantity, created_at
 `
 
-type CreateOrderItemParams struct {
-	OrderID    int64 `json:"order_id"`
-	ProductID  int64 `json:"product_id"`
-	Quantity   int32 `json:"quantity"`
-	PriceCents int32 `json:"price_cents"`
+type CreateProductParams struct {
+	Name       string `json:"name"`
+	PriceInIdr int32  `json:"price_in_idr"`
+	Quantity   int32  `json:"quantity"`
 }
 
-func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (OrderItem, error) {
-	row := q.db.QueryRow(ctx, createOrderItem,
-		arg.OrderID,
-		arg.ProductID,
-		arg.Quantity,
-		arg.PriceCents,
-	)
-	var i OrderItem
-	err := row.Scan(
-		&i.ID,
-		&i.OrderID,
-		&i.ProductID,
-		&i.Quantity,
-		&i.PriceCents,
-	)
-	return i, err
-}
-
-const findProductByID = `-- name: FindProductByID :one
-SELECT
-  id, name, price_in_centers, quantity, created_at
-FROM
-  products
-WHERE
-  id = $1
-`
-
-func (q *Queries) FindProductByID(ctx context.Context, id int64) (Product, error) {
-	row := q.db.QueryRow(ctx, findProductByID, id)
+func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, createProduct, arg.Name, arg.PriceInIdr, arg.Quantity)
 	var i Product
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.PriceInCenters,
+		&i.PriceInIdr,
 		&i.Quantity,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
+const findProductByID = `-- name: FindProductByID :one
+SELECT id, name, price_in_idr, quantity, created_at
+FROM products
+WHERE id = $1
+`
+
+func (q *Queries) FindProductByID(ctx context.Context, id int32) (Product, error) {
+	row := q.db.QueryRow(ctx, findProductByID, id)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PriceInIdr,
+		&i.Quantity,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getOrderByID = `-- name: GetOrderByID :one
+SELECT 
+  o.id AS order_id,
+  o.created_at,
+  c.name AS customer_name,
+  COALESCE(SUM(p.price_in_idr * oi.quantity), 0) AS total_price
+FROM orders o
+JOIN customers c ON o.customer_id = c.id
+LEFT JOIN order_items oi ON o.id = oi.order_id
+LEFT JOIN products p ON oi.product_id = p.id
+WHERE o.id = $1
+GROUP BY o.id, o.created_at, c.name
+`
+
+type GetOrderByIDRow struct {
+	OrderID      int32            `json:"order_id"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	CustomerName string           `json:"customer_name"`
+	TotalPrice   interface{}      `json:"total_price"`
+}
+
+func (q *Queries) GetOrderByID(ctx context.Context, id int32) (GetOrderByIDRow, error) {
+	row := q.db.QueryRow(ctx, getOrderByID, id)
+	var i GetOrderByIDRow
+	err := row.Scan(
+		&i.OrderID,
+		&i.CreatedAt,
+		&i.CustomerName,
+		&i.TotalPrice,
+	)
+	return i, err
+}
+
 const listProducts = `-- name: ListProducts :many
-SELECT
-  id, name, price_in_centers, quantity, created_at
-FROM
-  products
+SELECT id, name, price_in_idr, quantity, created_at
+FROM products
+ORDER BY created_at DESC
 `
 
 func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
@@ -93,7 +135,7 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.PriceInCenters,
+			&i.PriceInIdr,
 			&i.Quantity,
 			&i.CreatedAt,
 		); err != nil {
@@ -105,4 +147,20 @@ func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateProductStock = `-- name: UpdateProductStock :exec
+UPDATE products
+SET quantity = $2
+WHERE id = $1
+`
+
+type UpdateProductStockParams struct {
+	ID       int32 `json:"id"`
+	Quantity int32 `json:"quantity"`
+}
+
+func (q *Queries) UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) error {
+	_, err := q.db.Exec(ctx, updateProductStock, arg.ID, arg.Quantity)
+	return err
 }

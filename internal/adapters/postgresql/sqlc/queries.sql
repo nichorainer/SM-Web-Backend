@@ -1,14 +1,41 @@
 -- name: ListProducts :many
-SELECT * FROM products;
+SELECT id, name, price_in_idr, quantity, created_at
+FROM products
+ORDER BY created_at DESC;
 
---n name: FindProductByID :one
-SELECT * FROM products WHERE id = $1;
+-- name: FindProductByID :one
+SELECT id, name, price_in_idr, quantity, created_at
+FROM products
+WHERE id = $1;
+
+-- name: CreateProduct :one
+INSERT INTO products (name, price_in_idr, quantity)
+VALUES ($1, $2, $3)
+RETURNING id, name, price_in_idr, quantity, created_at;
+
+-- name: UpdateProductStock :exec
+UPDATE products
+SET quantity = $2
+WHERE id = $1;
+
+-- name: GetOrderByID :one
+SELECT 
+  o.id AS order_id,
+  o.created_at,
+  c.name AS customer_name,
+  COALESCE(SUM(p.price_in_idr * oi.quantity), 0) AS total_price
+FROM orders o
+JOIN customers c ON o.customer_id = c.id
+LEFT JOIN order_items oi ON o.id = oi.order_id
+LEFT JOIN products p ON oi.product_id = p.id
+WHERE o.id = $1
+GROUP BY o.id, o.created_at, c.name;
 
 -- name: CreateOrder :one
-INSERT INTO orders (
-  customer_id
-) VALUES ($1) RETURNING *;
+INSERT INTO orders (customer_id)
+VALUES ($1)
+RETURNING id, customer_id, created_at;
 
--- name: CreateOrderItem :one
-INSERT INTO order_items (order_id, product_id, quantity, price_cents)
-VALUES ($1, $2, $3, $4) RETURNING *;
+-- name: AddOrderItem :exec
+INSERT INTO order_items (order_id, product_id, quantity)
+VALUES ($1, $2, $3);
