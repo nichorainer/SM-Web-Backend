@@ -45,14 +45,18 @@ func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
     http.Error(w, "invalid json", http.StatusBadRequest)
     return
   }
+
   p, err := s.Repo.CreateProduct(r.Context(), sqlc.CreateProductParams{
     Name:       req.Name,
     PriceInIdr: int32(req.PriceInIDR),
     Quantity:   int32(req.Quantity),
   })
+
   if err != nil {
     http.Error(w, err.Error(), http.StatusInternalServerError)
     return
   }
-  json.NewEncoder(w).Encode(p)
+  
+  w.WriteHeader(http.StatusCreated)
+  json.NewEncoder(w).Encode(p)  
 }

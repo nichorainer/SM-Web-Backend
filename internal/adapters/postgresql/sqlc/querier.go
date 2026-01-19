@@ -10,11 +10,15 @@ import (
 
 type Querier interface {
 	AddOrderItem(ctx context.Context, arg AddOrderItemParams) error
+	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
 	CreateOrder(ctx context.Context, customerID int32) (Order, error)
-	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
-	FindProductByID(ctx context.Context, id int32) (Product, error)
+	CreateProduct(ctx context.Context, arg CreateProductParams) (CreateProductRow, error)
+	FindCustomerByID(ctx context.Context, id int32) (Customer, error)
+	FindProductByID(ctx context.Context, id int32) (FindProductByIDRow, error)
 	GetOrderByID(ctx context.Context, id int32) (GetOrderByIDRow, error)
-	ListProducts(ctx context.Context) ([]Product, error)
+	ListCustomers(ctx context.Context) ([]Customer, error)
+	ListLowStockProducts(ctx context.Context) ([]ListLowStockProductsRow, error)
+	ListProducts(ctx context.Context) ([]ListProductsRow, error)
 	UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) error
 }
 

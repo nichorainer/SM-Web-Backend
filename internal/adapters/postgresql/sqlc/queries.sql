@@ -39,3 +39,23 @@ RETURNING id, customer_id, created_at;
 -- name: AddOrderItem :exec
 INSERT INTO order_items (order_id, product_id, quantity)
 VALUES ($1, $2, $3);
+
+-- name: ListCustomers :many
+SELECT id, name, email, created_at
+FROM customers
+ORDER BY created_at DESC;
+
+-- name: FindCustomerByID :one
+SELECT id, name, email, created_at
+FROM customers
+WHERE id = $1;
+
+-- name: CreateCustomer :one
+INSERT INTO customers (name, email)
+VALUES ($1, $2)
+RETURNING id, name, email, created_at;
+
+-- name: ListLowStockProducts :many
+SELECT id, name, quantity
+FROM products
+WHERE quantity < 5;

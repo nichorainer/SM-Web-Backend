@@ -23,6 +23,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.RealIP) 	// import for rate limiting, analytics and tracing
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)	// recover from crashes
+	r.Use(middleware.RedirectSlashes) // redirect slashes to no slash URL
 
 	// set a timeout value on the request context (ctx),
 	// that will signal through ctx.Done() that the
@@ -37,7 +38,6 @@ func (app *application) mount() http.Handler {
     	Repo: repo.New(app.db),
   	}
 
-
 	// Products
 	r.Get("/products", server.ListProducts)
 	r.Get("/products/{id}", server.GetProductByID)
@@ -46,15 +46,10 @@ func (app *application) mount() http.Handler {
 	// Orders
 	r.Get("/orders/{id}", server.GetOrderByID)
 
-	// // products routes
-	// productService := products.NewService(repo.New(app.db))
-	// productHandler := products.NewHandler(productService)
-	// r.Get("/products", productHandler.ListProducts)
-
-	// // orders routes
-	// orderService := orders.NewService(repo.New(app.db), app.db)
-	// ordersHandler := orders.NewHandler(orderService)
-	// r.Post("/orders", ordersHandler.PlaceOrder)
+	// Customers
+	r.Get("/customers", server.ListCustomers)
+	r.Get("/customers/{id}", server.GetCustomerByID)
+	r.Post("/customer", server.CreateCustomer)
 
 	return r 
 }

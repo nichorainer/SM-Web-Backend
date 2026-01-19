@@ -27,6 +27,29 @@ func (q *Queries) AddOrderItem(ctx context.Context, arg AddOrderItemParams) erro
 	return err
 }
 
+const createCustomer = `-- name: CreateCustomer :one
+INSERT INTO customers (name, email)
+VALUES ($1, $2)
+RETURNING id, name, email, created_at
+`
+
+type CreateCustomerParams struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, createCustomer, arg.Name, arg.Email)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createOrder = `-- name: CreateOrder :one
 INSERT INTO orders (customer_id)
 VALUES ($1)
@@ -52,14 +75,40 @@ type CreateProductParams struct {
 	Quantity   int32  `json:"quantity"`
 }
 
-func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
+type CreateProductRow struct {
+	ID         int32            `json:"id"`
+	Name       string           `json:"name"`
+	PriceInIdr int32            `json:"price_in_idr"`
+	Quantity   int32            `json:"quantity"`
+	CreatedAt  pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (CreateProductRow, error) {
 	row := q.db.QueryRow(ctx, createProduct, arg.Name, arg.PriceInIdr, arg.Quantity)
-	var i Product
+	var i CreateProductRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.PriceInIdr,
 		&i.Quantity,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const findCustomerByID = `-- name: FindCustomerByID :one
+SELECT id, name, email, created_at
+FROM customers
+WHERE id = $1
+`
+
+func (q *Queries) FindCustomerByID(ctx context.Context, id int32) (Customer, error) {
+	row := q.db.QueryRow(ctx, findCustomerByID, id)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -71,9 +120,17 @@ FROM products
 WHERE id = $1
 `
 
-func (q *Queries) FindProductByID(ctx context.Context, id int32) (Product, error) {
+type FindProductByIDRow struct {
+	ID         int32            `json:"id"`
+	Name       string           `json:"name"`
+	PriceInIdr int32            `json:"price_in_idr"`
+	Quantity   int32            `json:"quantity"`
+	CreatedAt  pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) FindProductByID(ctx context.Context, id int32) (FindProductByIDRow, error) {
 	row := q.db.QueryRow(ctx, findProductByID, id)
-	var i Product
+	var i FindProductByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -117,21 +174,92 @@ func (q *Queries) GetOrderByID(ctx context.Context, id int32) (GetOrderByIDRow, 
 	return i, err
 }
 
+const listCustomers = `-- name: ListCustomers :many
+SELECT id, name, email, created_at
+FROM customers
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListCustomers(ctx context.Context) ([]Customer, error) {
+	rows, err := q.db.Query(ctx, listCustomers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Customer
+	for rows.Next() {
+		var i Customer
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLowStockProducts = `-- name: ListLowStockProducts :many
+SELECT id, name, quantity
+FROM products
+WHERE quantity < 5
+`
+
+type ListLowStockProductsRow struct {
+	ID       int32  `json:"id"`
+	Name     string `json:"name"`
+	Quantity int32  `json:"quantity"`
+}
+
+func (q *Queries) ListLowStockProducts(ctx context.Context) ([]ListLowStockProductsRow, error) {
+	rows, err := q.db.Query(ctx, listLowStockProducts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLowStockProductsRow
+	for rows.Next() {
+		var i ListLowStockProductsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Quantity); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProducts = `-- name: ListProducts :many
 SELECT id, name, price_in_idr, quantity, created_at
 FROM products
 ORDER BY created_at DESC
 `
 
-func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
+type ListProductsRow struct {
+	ID         int32            `json:"id"`
+	Name       string           `json:"name"`
+	PriceInIdr int32            `json:"price_in_idr"`
+	Quantity   int32            `json:"quantity"`
+	CreatedAt  pgtype.Timestamp `json:"created_at"`
+}
+
+func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
 	rows, err := q.db.Query(ctx, listProducts)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Product
+	var items []ListProductsRow
 	for rows.Next() {
-		var i Product
+		var i ListProductsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,

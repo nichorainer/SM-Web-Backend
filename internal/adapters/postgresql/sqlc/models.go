@@ -11,7 +11,7 @@ import (
 type Customer struct {
 	ID        int32            `json:"id"`
 	Name      string           `json:"name"`
-	Email     pgtype.Text      `json:"email"`
+	Email     string           `json:"email"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
@@ -29,9 +29,10 @@ type OrderItem struct {
 }
 
 type Product struct {
-	ID         int32            `json:"id"`
-	Name       string           `json:"name"`
-	PriceInIdr int32            `json:"price_in_idr"`
-	Quantity   int32            `json:"quantity"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
+	ID            int32            `json:"id"`
+	Name          string           `json:"name"`
+	PriceInIdr    int32            `json:"price_in_idr"`
+	Quantity      int32            `json:"quantity"`
+	CreatedAt     pgtype.Timestamp `json:"created_at"`
+	LowStockAlert pgtype.Bool      `json:"low_stock_alert"`
 }

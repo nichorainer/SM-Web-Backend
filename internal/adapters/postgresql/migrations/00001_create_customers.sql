@@ -3,7 +3,7 @@
 CREATE TABLE customers (
   id SERIAL PRIMARY KEY,
   name TEXT NOT NULL,
-  email TEXT UNIQUE,
+  email TEXT NOT NULL,
   created_at TIMESTAMP DEFAULT now()
 );
 -- +goose StatementEnd
