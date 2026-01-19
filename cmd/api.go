@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
@@ -18,6 +19,10 @@ import (
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 
+	server := handlers.Server{
+    	Repo: repo.New(app.db),
+  	}
+
 	// middleware
 	r.Use(middleware.RequestID)	// important for rate limiting
 	r.Use(middleware.RealIP) 	// import for rate limiting, analytics and tracing
@@ -25,18 +30,11 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Recoverer)	// recover from crashes
 	r.Use(middleware.RedirectSlashes) // redirect slashes to no slash URL
 
-	// set a timeout value on the request context (ctx),
-	// that will signal through ctx.Done() that the
-	// request has timed out and further processing should be stopped.
-	r.Use(middleware.Timeout(60 * time.Second)) // 60 seconds
+	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("all good"))
 	})
-
-	server := handlers.Server{
-    	Repo: repo.New(app.db),
-  	}
 
 	// Products
 	r.Get("/products", server.ListProducts)
@@ -50,6 +48,7 @@ func (app *application) mount() http.Handler {
 	r.Get("/customers", server.ListCustomers)
 	r.Get("/customers/{id}", server.GetCustomerByID)
 	r.Post("/customer", server.CreateCustomer)
+
 
 	return r 
 }
