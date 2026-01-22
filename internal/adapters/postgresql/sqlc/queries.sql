@@ -1,61 +1,96 @@
--- name: ListProducts :many
-SELECT id, name, price_in_idr, quantity, created_at
-FROM products
-ORDER BY created_at DESC;
+-- internal/adapters/postgresql/sqlc/queries.sql
 
--- name: FindProductByID :one
-SELECT id, name, price_in_idr, quantity, created_at
-FROM products
-WHERE id = $1;
+-- Users
+
+-- name: CreateUser :one
+INSERT INTO users (user_id, username, email, full_name, password_hash, role)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, user_id, username, email, full_name, role, created_at, updated_at;
+
+-- name: CountUsers :one
+SELECT COUNT(*) FROM users;
+
+-- name: GetUserByUsernameOrEmail :one
+SELECT id, user_id, username, email, full_name, password_hash, role, created_at, updated_at
+FROM users
+WHERE username = $1 OR email = $2
+LIMIT 1;
+
+-- name: GetUserByID :one
+SELECT id, user_id, username, email, full_name, password_hash, role, created_at, updated_at
+FROM users
+WHERE id = $1
+LIMIT 1;
+
+-- name: UpdateUser :one
+UPDATE users
+SET username = COALESCE(NULLIF($2, ''), username),
+    email = COALESCE(NULLIF($3, ''), email),
+    full_name = COALESCE(NULLIF($4, ''), full_name),
+    password_hash = COALESCE(NULLIF($5, ''), password_hash),
+    updated_at = now()
+WHERE id = $1
+RETURNING id, user_id, username, email, full_name, role, created_at, updated_at;
+
+-- name: UpdateUserRole :exec
+UPDATE users SET role = $1, updated_at = now() WHERE id = $2;
+
+-- Products
 
 -- name: CreateProduct :one
-INSERT INTO products (name, price_in_idr, quantity)
-VALUES ($1, $2, $3)
-RETURNING id, name, price_in_idr, quantity, created_at;
+INSERT INTO products (product_id, product_name, supplier_name, category, price_idr, stock, created_by)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at;
 
--- name: UpdateProductStock :exec
+-- name: GetProductByProductID :one
+SELECT id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
+FROM products
+WHERE product_id = $1
+LIMIT 1;
+
+-- name: ListProducts :many
+SELECT id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
+FROM products
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: UpdateProduct :one
 UPDATE products
-SET quantity = $2
-WHERE id = $1;
+SET product_name = COALESCE(NULLIF($2, ''), product_name),
+    supplier_name = COALESCE(NULLIF($3, ''), supplier_name),
+    category = COALESCE(NULLIF($4, ''), category),
+    price_idr = COALESCE($5, price_idr),
+    stock = COALESCE($6, stock),
+    updated_at = now()
+WHERE product_id = $1
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at;
 
--- name: GetOrderByID :one
-SELECT 
-  o.id AS order_id,
-  o.created_at,
-  c.name AS customer_name,
-  COALESCE(SUM(p.price_in_idr * oi.quantity), 0) AS total_price
-FROM orders o
-JOIN customers c ON o.customer_id = c.id
-LEFT JOIN order_items oi ON o.id = oi.order_id
-LEFT JOIN products p ON oi.product_id = p.id
-WHERE o.id = $1
-GROUP BY o.id, o.created_at, c.name;
+-- Orders
 
 -- name: CreateOrder :one
-INSERT INTO orders (customer_id)
-VALUES ($1)
-RETURNING id, customer_id, created_at;
+INSERT INTO orders (order_number, customer_id, created_by, total_amount, status)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at;
 
--- name: AddOrderItem :exec
-INSERT INTO order_items (order_id, product_id, quantity)
-VALUES ($1, $2, $3);
+-- name: CreateOrderItem :one
+INSERT INTO order_items (order_id, product_id, product_code, product_name, unit_price, quantity, line_total)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id;
 
--- name: ListCustomers :many
-SELECT id, name, email, created_at
-FROM customers
-ORDER BY created_at DESC;
+-- name: ListOrders :many
+SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+FROM orders
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
 
--- name: FindCustomerByID :one
-SELECT id, name, email, created_at
-FROM customers
-WHERE id = $1;
+-- name: GetOrderByID :one
+SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+FROM orders
+WHERE id = $1
+LIMIT 1;
 
--- name: CreateCustomer :one
-INSERT INTO customers (name, email)
-VALUES ($1, $2)
-RETURNING id, name, email, created_at;
+-- Utility queries
 
--- name: ListLowStockProducts :many
-SELECT id, name, quantity
-FROM products
-WHERE quantity < 5;
+-- name: NextProductSequence :one
+-- This is a helper to get a next sequence number for product id generation if you prefer DB-side sequence.
+SELECT nextval('products_id_seq') as seq;

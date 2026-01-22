@@ -8,31 +8,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Customer struct {
-	ID        int32            `json:"id"`
-	Name      string           `json:"name"`
-	Email     string           `json:"email"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-}
-
 type Order struct {
-	ID         int32            `json:"id"`
-	CustomerID int32            `json:"customer_id"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
+	ID          int32              `json:"id"`
+	OrderNumber string             `json:"order_number"`
+	CustomerID  pgtype.Int4        `json:"customer_id"`
+	CreatedBy   pgtype.Int4        `json:"created_by"`
+	TotalAmount pgtype.Int8        `json:"total_amount"`
+	Status      pgtype.Text        `json:"status"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type OrderItem struct {
-	ID        int32 `json:"id"`
-	OrderID   int32 `json:"order_id"`
-	ProductID int32 `json:"product_id"`
-	Quantity  int32 `json:"quantity"`
+	ID          int32              `json:"id"`
+	OrderID     pgtype.Int4        `json:"order_id"`
+	ProductID   pgtype.Int4        `json:"product_id"`
+	ProductCode pgtype.Text        `json:"product_code"`
+	ProductName pgtype.Text        `json:"product_name"`
+	UnitPrice   pgtype.Int8        `json:"unit_price"`
+	Quantity    pgtype.Int4        `json:"quantity"`
+	LineTotal   pgtype.Int8        `json:"line_total"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type Product struct {
-	ID            int32            `json:"id"`
-	Name          string           `json:"name"`
-	PriceInIdr    int32            `json:"price_in_idr"`
-	Quantity      int32            `json:"quantity"`
-	CreatedAt     pgtype.Timestamp `json:"created_at"`
-	LowStockAlert pgtype.Bool      `json:"low_stock_alert"`
+	ID           int32              `json:"id"`
+	ProductID    string             `json:"product_id"`
+	ProductName  string             `json:"product_name"`
+	SupplierName pgtype.Text        `json:"supplier_name"`
+	Category     pgtype.Text        `json:"category"`
+	PriceIdr     int64              `json:"price_idr"`
+	Stock        int32              `json:"stock"`
+	CreatedBy    pgtype.Int4        `json:"created_by"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type User struct {
+	ID           int32              `json:"id"`
+	UserID       pgtype.Text        `json:"user_id"`
+	Username     string             `json:"username"`
+	Email        string             `json:"email"`
+	FullName     pgtype.Text        `json:"full_name"`
+	PasswordHash string             `json:"password_hash"`
+	Role         string             `json:"role"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }

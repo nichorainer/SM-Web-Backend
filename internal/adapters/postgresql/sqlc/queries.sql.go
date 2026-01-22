@@ -11,222 +11,315 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const addOrderItem = `-- name: AddOrderItem :exec
-INSERT INTO order_items (order_id, product_id, quantity)
-VALUES ($1, $2, $3)
+const countUsers = `-- name: CountUsers :one
+SELECT COUNT(*) FROM users
 `
 
-type AddOrderItemParams struct {
-	OrderID   int32 `json:"order_id"`
-	ProductID int32 `json:"product_id"`
-	Quantity  int32 `json:"quantity"`
-}
-
-func (q *Queries) AddOrderItem(ctx context.Context, arg AddOrderItemParams) error {
-	_, err := q.db.Exec(ctx, addOrderItem, arg.OrderID, arg.ProductID, arg.Quantity)
-	return err
-}
-
-const createCustomer = `-- name: CreateCustomer :one
-INSERT INTO customers (name, email)
-VALUES ($1, $2)
-RETURNING id, name, email, created_at
-`
-
-type CreateCustomerParams struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-}
-
-func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error) {
-	row := q.db.QueryRow(ctx, createCustomer, arg.Name, arg.Email)
-	var i Customer
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.CreatedAt,
-	)
-	return i, err
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
 }
 
 const createOrder = `-- name: CreateOrder :one
-INSERT INTO orders (customer_id)
-VALUES ($1)
-RETURNING id, customer_id, created_at
+
+INSERT INTO orders (order_number, customer_id, created_by, total_amount, status)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
 `
 
-func (q *Queries) CreateOrder(ctx context.Context, customerID int32) (Order, error) {
-	row := q.db.QueryRow(ctx, createOrder, customerID)
+type CreateOrderParams struct {
+	OrderNumber string      `json:"order_number"`
+	CustomerID  pgtype.Int4 `json:"customer_id"`
+	CreatedBy   pgtype.Int4 `json:"created_by"`
+	TotalAmount pgtype.Int8 `json:"total_amount"`
+	Status      pgtype.Text `json:"status"`
+}
+
+// Orders
+func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
+	row := q.db.QueryRow(ctx, createOrder,
+		arg.OrderNumber,
+		arg.CustomerID,
+		arg.CreatedBy,
+		arg.TotalAmount,
+		arg.Status,
+	)
 	var i Order
-	err := row.Scan(&i.ID, &i.CustomerID, &i.CreatedAt)
+	err := row.Scan(
+		&i.ID,
+		&i.OrderNumber,
+		&i.CustomerID,
+		&i.CreatedBy,
+		&i.TotalAmount,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
+}
+
+const createOrderItem = `-- name: CreateOrderItem :one
+INSERT INTO order_items (order_id, product_id, product_code, product_name, unit_price, quantity, line_total)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id
+`
+
+type CreateOrderItemParams struct {
+	OrderID     pgtype.Int4 `json:"order_id"`
+	ProductID   pgtype.Int4 `json:"product_id"`
+	ProductCode pgtype.Text `json:"product_code"`
+	ProductName pgtype.Text `json:"product_name"`
+	UnitPrice   pgtype.Int8 `json:"unit_price"`
+	Quantity    pgtype.Int4 `json:"quantity"`
+	LineTotal   pgtype.Int8 `json:"line_total"`
+}
+
+func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createOrderItem,
+		arg.OrderID,
+		arg.ProductID,
+		arg.ProductCode,
+		arg.ProductName,
+		arg.UnitPrice,
+		arg.Quantity,
+		arg.LineTotal,
+	)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
 const createProduct = `-- name: CreateProduct :one
-INSERT INTO products (name, price_in_idr, quantity)
-VALUES ($1, $2, $3)
-RETURNING id, name, price_in_idr, quantity, created_at
+
+INSERT INTO products (product_id, product_name, supplier_name, category, price_idr, stock, created_by)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
 `
 
 type CreateProductParams struct {
-	Name       string `json:"name"`
-	PriceInIdr int32  `json:"price_in_idr"`
-	Quantity   int32  `json:"quantity"`
+	ProductID    string      `json:"product_id"`
+	ProductName  string      `json:"product_name"`
+	SupplierName pgtype.Text `json:"supplier_name"`
+	Category     pgtype.Text `json:"category"`
+	PriceIdr     int64       `json:"price_idr"`
+	Stock        int32       `json:"stock"`
+	CreatedBy    pgtype.Int4 `json:"created_by"`
 }
 
-type CreateProductRow struct {
-	ID         int32            `json:"id"`
-	Name       string           `json:"name"`
-	PriceInIdr int32            `json:"price_in_idr"`
-	Quantity   int32            `json:"quantity"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
-}
-
-func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (CreateProductRow, error) {
-	row := q.db.QueryRow(ctx, createProduct, arg.Name, arg.PriceInIdr, arg.Quantity)
-	var i CreateProductRow
+// Products
+func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, createProduct,
+		arg.ProductID,
+		arg.ProductName,
+		arg.SupplierName,
+		arg.Category,
+		arg.PriceIdr,
+		arg.Stock,
+		arg.CreatedBy,
+	)
+	var i Product
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
-		&i.PriceInIdr,
-		&i.Quantity,
+		&i.ProductID,
+		&i.ProductName,
+		&i.SupplierName,
+		&i.Category,
+		&i.PriceIdr,
+		&i.Stock,
+		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const findCustomerByID = `-- name: FindCustomerByID :one
-SELECT id, name, email, created_at
-FROM customers
-WHERE id = $1
+const createUser = `-- name: CreateUser :one
+
+
+INSERT INTO users (user_id, username, email, full_name, password_hash, role)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, user_id, username, email, full_name, role, created_at, updated_at
 `
 
-func (q *Queries) FindCustomerByID(ctx context.Context, id int32) (Customer, error) {
-	row := q.db.QueryRow(ctx, findCustomerByID, id)
-	var i Customer
+type CreateUserParams struct {
+	UserID       pgtype.Text `json:"user_id"`
+	Username     string      `json:"username"`
+	Email        string      `json:"email"`
+	FullName     pgtype.Text `json:"full_name"`
+	PasswordHash string      `json:"password_hash"`
+	Role         string      `json:"role"`
+}
+
+type CreateUserRow struct {
+	ID        int32              `json:"id"`
+	UserID    pgtype.Text        `json:"user_id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	FullName  pgtype.Text        `json:"full_name"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// internal/adapters/postgresql/sqlc/queries.sql
+// Users
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
+	row := q.db.QueryRow(ctx, createUser,
+		arg.UserID,
+		arg.Username,
+		arg.Email,
+		arg.FullName,
+		arg.PasswordHash,
+		arg.Role,
+	)
+	var i CreateUserRow
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
+		&i.UserID,
+		&i.Username,
 		&i.Email,
+		&i.FullName,
+		&i.Role,
 		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const findProductByID = `-- name: FindProductByID :one
-SELECT id, name, price_in_idr, quantity, created_at
-FROM products
-WHERE id = $1
-`
-
-type FindProductByIDRow struct {
-	ID         int32            `json:"id"`
-	Name       string           `json:"name"`
-	PriceInIdr int32            `json:"price_in_idr"`
-	Quantity   int32            `json:"quantity"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
-}
-
-func (q *Queries) FindProductByID(ctx context.Context, id int32) (FindProductByIDRow, error) {
-	row := q.db.QueryRow(ctx, findProductByID, id)
-	var i FindProductByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.PriceInIdr,
-		&i.Quantity,
-		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT 
-  o.id AS order_id,
-  o.created_at,
-  c.name AS customer_name,
-  COALESCE(SUM(p.price_in_idr * oi.quantity), 0) AS total_price
-FROM orders o
-JOIN customers c ON o.customer_id = c.id
-LEFT JOIN order_items oi ON o.id = oi.order_id
-LEFT JOIN products p ON oi.product_id = p.id
-WHERE o.id = $1
-GROUP BY o.id, o.created_at, c.name
+SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+FROM orders
+WHERE id = $1
+LIMIT 1
 `
 
-type GetOrderByIDRow struct {
-	OrderID      int32            `json:"order_id"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	CustomerName string           `json:"customer_name"`
-	TotalPrice   interface{}      `json:"total_price"`
-}
-
-func (q *Queries) GetOrderByID(ctx context.Context, id int32) (GetOrderByIDRow, error) {
+func (q *Queries) GetOrderByID(ctx context.Context, id int32) (Order, error) {
 	row := q.db.QueryRow(ctx, getOrderByID, id)
-	var i GetOrderByIDRow
+	var i Order
 	err := row.Scan(
-		&i.OrderID,
+		&i.ID,
+		&i.OrderNumber,
+		&i.CustomerID,
+		&i.CreatedBy,
+		&i.TotalAmount,
+		&i.Status,
 		&i.CreatedAt,
-		&i.CustomerName,
-		&i.TotalPrice,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const listCustomers = `-- name: ListCustomers :many
-SELECT id, name, email, created_at
-FROM customers
-ORDER BY created_at DESC
+const getProductByProductID = `-- name: GetProductByProductID :one
+SELECT id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
+FROM products
+WHERE product_id = $1
+LIMIT 1
 `
 
-func (q *Queries) ListCustomers(ctx context.Context) ([]Customer, error) {
-	rows, err := q.db.Query(ctx, listCustomers)
+func (q *Queries) GetProductByProductID(ctx context.Context, productID string) (Product, error) {
+	row := q.db.QueryRow(ctx, getProductByProductID, productID)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.ProductName,
+		&i.SupplierName,
+		&i.Category,
+		&i.PriceIdr,
+		&i.Stock,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, user_id, username, email, full_name, password_hash, role, created_at, updated_at
+FROM users
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Username,
+		&i.Email,
+		&i.FullName,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
+SELECT id, user_id, username, email, full_name, password_hash, role, created_at, updated_at
+FROM users
+WHERE username = $1 OR email = $2
+LIMIT 1
+`
+
+type GetUserByUsernameOrEmailParams struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+}
+
+func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByUsernameOrEmail, arg.Username, arg.Email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Username,
+		&i.Email,
+		&i.FullName,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const listOrders = `-- name: ListOrders :many
+SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+FROM orders
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListOrdersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error) {
+	rows, err := q.db.Query(ctx, listOrders, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Customer
+	var items []Order
 	for rows.Next() {
-		var i Customer
+		var i Order
 		if err := rows.Scan(
 			&i.ID,
-			&i.Name,
-			&i.Email,
+			&i.OrderNumber,
+			&i.CustomerID,
+			&i.CreatedBy,
+			&i.TotalAmount,
+			&i.Status,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listLowStockProducts = `-- name: ListLowStockProducts :many
-SELECT id, name, quantity
-FROM products
-WHERE quantity < 5
-`
-
-type ListLowStockProductsRow struct {
-	ID       int32  `json:"id"`
-	Name     string `json:"name"`
-	Quantity int32  `json:"quantity"`
-}
-
-func (q *Queries) ListLowStockProducts(ctx context.Context) ([]ListLowStockProductsRow, error) {
-	rows, err := q.db.Query(ctx, listLowStockProducts)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListLowStockProductsRow
-	for rows.Next() {
-		var i ListLowStockProductsRow
-		if err := rows.Scan(&i.ID, &i.Name, &i.Quantity); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -238,34 +331,37 @@ func (q *Queries) ListLowStockProducts(ctx context.Context) ([]ListLowStockProdu
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, name, price_in_idr, quantity, created_at
+SELECT id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
 FROM products
 ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
 `
 
-type ListProductsRow struct {
-	ID         int32            `json:"id"`
-	Name       string           `json:"name"`
-	PriceInIdr int32            `json:"price_in_idr"`
-	Quantity   int32            `json:"quantity"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
+type ListProductsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
-	rows, err := q.db.Query(ctx, listProducts)
+func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error) {
+	rows, err := q.db.Query(ctx, listProducts, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListProductsRow
+	var items []Product
 	for rows.Next() {
-		var i ListProductsRow
+		var i Product
 		if err := rows.Scan(
 			&i.ID,
-			&i.Name,
-			&i.PriceInIdr,
-			&i.Quantity,
+			&i.ProductID,
+			&i.ProductName,
+			&i.SupplierName,
+			&i.Category,
+			&i.PriceIdr,
+			&i.Stock,
+			&i.CreatedBy,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -277,18 +373,128 @@ func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
 	return items, nil
 }
 
-const updateProductStock = `-- name: UpdateProductStock :exec
-UPDATE products
-SET quantity = $2
-WHERE id = $1
+const nextProductSequence = `-- name: NextProductSequence :one
+
+SELECT nextval('products_id_seq') as seq
 `
 
-type UpdateProductStockParams struct {
-	ID       int32 `json:"id"`
-	Quantity int32 `json:"quantity"`
+// Utility queries
+// This is a helper to get a next sequence number for product id generation if you prefer DB-side sequence.
+func (q *Queries) NextProductSequence(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, nextProductSequence)
+	var seq int64
+	err := row.Scan(&seq)
+	return seq, err
 }
 
-func (q *Queries) UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) error {
-	_, err := q.db.Exec(ctx, updateProductStock, arg.ID, arg.Quantity)
+const updateProduct = `-- name: UpdateProduct :one
+UPDATE products
+SET product_name = COALESCE(NULLIF($2, ''), product_name),
+    supplier_name = COALESCE(NULLIF($3, ''), supplier_name),
+    category = COALESCE(NULLIF($4, ''), category),
+    price_idr = COALESCE($5, price_idr),
+    stock = COALESCE($6, stock),
+    updated_at = now()
+WHERE product_id = $1
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
+`
+
+type UpdateProductParams struct {
+	ProductID string      `json:"product_id"`
+	Column2   interface{} `json:"column_2"`
+	Column3   interface{} `json:"column_3"`
+	Column4   interface{} `json:"column_4"`
+	PriceIdr  int64       `json:"price_idr"`
+	Stock     int32       `json:"stock"`
+}
+
+func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateProduct,
+		arg.ProductID,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.PriceIdr,
+		arg.Stock,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.ProductName,
+		&i.SupplierName,
+		&i.Category,
+		&i.PriceIdr,
+		&i.Stock,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUser = `-- name: UpdateUser :one
+UPDATE users
+SET username = COALESCE(NULLIF($2, ''), username),
+    email = COALESCE(NULLIF($3, ''), email),
+    full_name = COALESCE(NULLIF($4, ''), full_name),
+    password_hash = COALESCE(NULLIF($5, ''), password_hash),
+    updated_at = now()
+WHERE id = $1
+RETURNING id, user_id, username, email, full_name, role, created_at, updated_at
+`
+
+type UpdateUserParams struct {
+	ID      int32       `json:"id"`
+	Column2 interface{} `json:"column_2"`
+	Column3 interface{} `json:"column_3"`
+	Column4 interface{} `json:"column_4"`
+	Column5 interface{} `json:"column_5"`
+}
+
+type UpdateUserRow struct {
+	ID        int32              `json:"id"`
+	UserID    pgtype.Text        `json:"user_id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	FullName  pgtype.Text        `json:"full_name"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.ID,
+		arg.Column2,
+		arg.Column3,
+		arg.Column4,
+		arg.Column5,
+	)
+	var i UpdateUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Username,
+		&i.Email,
+		&i.FullName,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateUserRole = `-- name: UpdateUserRole :exec
+UPDATE users SET role = $1, updated_at = now() WHERE id = $2
+`
+
+type UpdateUserRoleParams struct {
+	Role string `json:"role"`
+	ID   int32  `json:"id"`
+}
+
+func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error {
+	_, err := q.db.Exec(ctx, updateUserRole, arg.Role, arg.ID)
 	return err
 }

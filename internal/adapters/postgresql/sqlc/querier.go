@@ -9,17 +9,27 @@ import (
 )
 
 type Querier interface {
-	AddOrderItem(ctx context.Context, arg AddOrderItemParams) error
-	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
-	CreateOrder(ctx context.Context, customerID int32) (Order, error)
-	CreateProduct(ctx context.Context, arg CreateProductParams) (CreateProductRow, error)
-	FindCustomerByID(ctx context.Context, id int32) (Customer, error)
-	FindProductByID(ctx context.Context, id int32) (FindProductByIDRow, error)
-	GetOrderByID(ctx context.Context, id int32) (GetOrderByIDRow, error)
-	ListCustomers(ctx context.Context) ([]Customer, error)
-	ListLowStockProducts(ctx context.Context) ([]ListLowStockProductsRow, error)
-	ListProducts(ctx context.Context) ([]ListProductsRow, error)
-	UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) error
+	CountUsers(ctx context.Context) (int64, error)
+	// Orders
+	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
+	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (int32, error)
+	// Products
+	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
+	// internal/adapters/postgresql/sqlc/queries.sql
+	// Users
+	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
+	GetOrderByID(ctx context.Context, id int32) (Order, error)
+	GetProductByProductID(ctx context.Context, productID string) (Product, error)
+	GetUserByID(ctx context.Context, id int32) (User, error)
+	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (User, error)
+	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
+	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
+	// Utility queries
+	// This is a helper to get a next sequence number for product id generation if you prefer DB-side sequence.
+	NextProductSequence(ctx context.Context) (int64, error)
+	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
+	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
 }
 
 var _ Querier = (*Queries)(nil)
