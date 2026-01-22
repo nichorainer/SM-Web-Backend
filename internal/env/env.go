@@ -32,3 +32,11 @@ func getEnv(key, fallback string) string {
 	}
 	return fallback
 }
+
+// GetString returns the environment variable value for key or fallback if empty.
+func GetString(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}

@@ -3,59 +3,93 @@ package handlers
 import (
   "encoding/json"
   "net/http"
-  "strconv"
-
+  
+  "github.com/jackc/pgx/v5/pgtype"
   "github.com/go-chi/chi/v5"
-  sqlc "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
+  repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 )
 
 type Server struct {
-  Repo sqlc.Querier
+  Repo repo.Querier
 }
 
+// Register product routes (call this from your main router setup)
+func (s *Server) RegisterProductRoutes(r chi.Router) {
+	r.Get("/products", s.ListProducts)
+	r.Get("/products/{product_id}", s.GetProductByID)
+	r.Post("/products", s.CreateProduct)
+}
+
+// CreateProductRequest is the expected JSON body for creating a product
 type CreateProductRequest struct {
-  Name       string `json:"name"`
-  PriceInIDR int    `json:"price_in_idr"`
-  Quantity   int    `json:"quantity"`
+	ProductID    string `json:"product_id"`
+	ProductName  string `json:"product_name"`
+	SupplierName string `json:"supplier_name"`
+	Category     string `json:"category"`
+	PriceIdr     int64  `json:"price_idr"`
+	Stock        int32  `json:"stock"`
+	CreatedBy    int32  `json:"created_by"`
 }
 
+
+// ListProducts returns a paginated list of products.
 func (s *Server) ListProducts(w http.ResponseWriter, r *http.Request) {
-  products, err := s.Repo.ListProducts(r.Context())
-  if err != nil {
-    http.Error(w, err.Error(), http.StatusInternalServerError)
-    return
-  }
-  json.NewEncoder(w).Encode(products)
+	params := repo.ListProductsParams{
+		Limit:  100,
+		Offset: 0,
+	}
+
+	products, err := s.Repo.ListProducts(r.Context(), params)
+	if err != nil {
+		http.Error(w, "failed to list products", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(products)
 }
 
+// GetProductByID returns a product by product_id (string).
 func (s *Server) GetProductByID(w http.ResponseWriter, r *http.Request) {
-  idStr := chi.URLParam(r, "id")
-  id, _ := strconv.Atoi(idStr)
-  product, err := s.Repo.FindProductByID(r.Context(), int32(id))
-  if err != nil {
-    http.Error(w, err.Error(), http.StatusNotFound)
-    return
-  }
+	productID := chi.URLParam(r, "product_id")
+	if productID == "" {
+		http.Error(w, "missing product_id", http.StatusBadRequest)
+		return
+	}
+
+	product, err := s.Repo.GetProductByProductID(r.Context(), productID)
+	if err != nil {
+		http.Error(w, "product not found", http.StatusNotFound)
+		return
+	}
+
   json.NewEncoder(w).Encode(product)
 }
 
+// CreateProduct creates a new product using sqlc-generated params.
 func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
   var req CreateProductRequest
+  dec := json.NewDecoder(r.Body)
+  dec.DisallowUnknownFields()
   if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
     http.Error(w, "invalid json", http.StatusBadRequest)
     return
   }
 
-  p, err := s.Repo.CreateProduct(r.Context(), sqlc.CreateProductParams{
-    Name:       req.Name,
-    PriceInIdr: int32(req.PriceInIDR),
-    Quantity:   int32(req.Quantity),
-  })
+  arg := repo.CreateProductParams{
+    ProductID:    pgtype.Text{String: req.ProductID, Valid: req.ProductID != ""},
+		ProductName:  pgtype.Text{String: req.ProductName, Valid: req.ProductName != ""},
+		SupplierName: pgtype.Text{String: req.SupplierName, Valid: req.SupplierName != ""},
+		Category:     pgtype.Text{String: req.Category, Valid: req.Category != ""},
+		PriceIdr:     pgtype.Int8{Int: req.PriceIdr, Valid: true},
+		Stock:        pgtype.Int4{Int: req.Stock, Valid: true},
+		CreatedBy:    pgtype.Int4{Int: req.CreatedBy, Valid: true},
+    }
 
-  if err != nil {
-    http.Error(w, err.Error(), http.StatusInternalServerError)
-    return
-  }
+    p, err := s.Repo.CreateProduct(r.Context(), arg)
+    if err != nil {
+      http.Error(w, "failed to create product", http.StatusInternalServerError)
+      return
+    }
   
   w.WriteHeader(http.StatusCreated)
   json.NewEncoder(w).Encode(p)  

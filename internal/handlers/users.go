@@ -6,7 +6,7 @@ import (
     "strconv"
 
     "github.com/go-chi/chi/v5"
-    sqlc "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
+    repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 )
 
 type CreateCustomerRequest struct {
