@@ -23,6 +23,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: smweb-backend
+    # If your docker-compose supports service_healthy, this waits for postgres readiness.
     depends_on:
       postgres:
         condition: service_healthy
@@ -36,9 +37,11 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./:/app
+      - ./:/app:cached
       - ./internal/adapters/postgresql/migrations:/migrations:ro
-    command: ["/app/bin/backend"] # replace with your actual binary/entrypoint
+    # If your Dockerfile defines ENTRYPOINT/CMD you can omit command.
+    # Replace with the actual binary path if you build a binary into the image.
+    command: ["/app/bin/backend"]
     restart: unless-stopped
 
 volumes:
