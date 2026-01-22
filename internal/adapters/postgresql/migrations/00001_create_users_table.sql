@@ -3,10 +3,10 @@
 -- 00001_create_users_table.sql
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
-  user_id VARCHAR(10) UNIQUE,
+  user_id TEXT NOT NULL UNIQUE,
   username VARCHAR(100) UNIQUE NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
-  full_name VARCHAR(255),
+  full_name TEXT NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   role VARCHAR(20) NOT NULL DEFAULT 'staff', -- 'admin' or 'staff'
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),

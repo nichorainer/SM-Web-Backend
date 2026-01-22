@@ -44,11 +44,10 @@ func (app *application) mount() http.Handler {
 	// Orders
 	r.Get("/orders/{id}", server.GetOrderByID)
 
-	// Customers
-	r.Get("/customers", server.ListCustomers)
-	r.Get("/customers/{id}", server.GetCustomerByID)
-	r.Post("/customer", server.CreateCustomer)
-
+	// Users
+	r.Get("/users", server.ListUsers)
+	r.Get("/users/{user_id}", server.GetUserByID)
+	r.Post("/users", server.CreateUser)
 
 	return r 
 }

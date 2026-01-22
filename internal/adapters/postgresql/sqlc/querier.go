@@ -24,6 +24,7 @@ type Querier interface {
 	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (User, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	// Utility queries
 	// This is a helper to get a next sequence number for product id generation if you prefer DB-side sequence.
 	NextProductSequence(ctx context.Context) (int64, error)

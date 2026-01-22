@@ -4,6 +4,7 @@ import (
   "encoding/json"
   "net/http"
   
+  "github.com/jackc/pgx/v5/pgtype"
   "github.com/go-chi/chi/v5"
   repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 )
@@ -21,15 +22,14 @@ func (s *Server) RegisterProductRoutes(r chi.Router) {
 
 // CreateProductRequest is the expected JSON body for creating a product
 type CreateProductRequest struct {
-	ProductID    string `json:"product_id"`
-	ProductName  string `json:"product_name"`
-	SupplierName string `json:"supplier_name"`
-	Category     string `json:"category"`
-	PriceIdr     int64  `json:"price_idr"`
-	Stock        int32  `json:"stock"`
-	CreatedBy    int32  `json:"created_by"`
+    ProductID    string `json:"product_id"`
+    ProductName  string `json:"product_name"`
+    SupplierName string `json:"supplier_name"`
+    Category     string `json:"category"`
+    PriceIdr     int64  `json:"price_idr"`
+    Stock        int32  `json:"stock"`
+    CreatedBy    string `json:"created_by"`
 }
-
 
 // ListProducts returns a paginated list of products.
 func (s *Server) ListProducts(w http.ResponseWriter, r *http.Request) {
@@ -64,30 +64,34 @@ func (s *Server) GetProductByID(w http.ResponseWriter, r *http.Request) {
   json.NewEncoder(w).Encode(product)
 }
 
-// CreateProduct creates a new product using sqlc-generated params.
 func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
-  var req CreateProductRequest
-  if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-    http.Error(w, "invalid json", http.StatusBadRequest)
-    return
-  }
+    var req CreateProductRequest
+    dec := json.NewDecoder(r.Body)
+    dec.DisallowUnknownFields()
+    if err := dec.Decode(&req); err != nil {
+        http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
+        return
+    }
 
-  arg := repo.CreateProductParams{
+ arg := repo.CreateProductParams{
     ProductID:    req.ProductID,
     ProductName:  req.ProductName,
     SupplierName: req.SupplierName,
     Category:     req.Category,
     PriceIdr:     req.PriceIdr,
     Stock:        req.Stock,
-    CreatedBy:    req.CreatedBy,
-  }
+    CreatedBy:    pgtype.Text{String: req.CreatedBy, Valid: req.CreatedBy != ""},
+}
 
     p, err := s.Repo.CreateProduct(r.Context(), arg)
     if err != nil {
-      http.Error(w, "failed to create product", http.StatusInternalServerError)
-      return
+        http.Error(w, "failed to create product: "+err.Error(), http.StatusInternalServerError)
+        return
     }
-  
-  w.WriteHeader(http.StatusCreated)
-  json.NewEncoder(w).Encode(p)  
+
+    w.Header().Set("Content-Type", "application/json")
+    w.WriteHeader(http.StatusCreated)
+    if err := json.NewEncoder(w).Encode(p); err != nil {
+        http.Error(w, "failed to encode response", http.StatusInternalServerError)
+    }
 }

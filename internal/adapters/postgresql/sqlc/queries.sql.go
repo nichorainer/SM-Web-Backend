@@ -101,11 +101,11 @@ RETURNING id, product_id, product_name, supplier_name, category, price_idr, stoc
 type CreateProductParams struct {
 	ProductID    string      `json:"product_id"`
 	ProductName  string      `json:"product_name"`
-	SupplierName pgtype.Text `json:"supplier_name"`
-	Category     pgtype.Text `json:"category"`
+	SupplierName string      `json:"supplier_name"`
+	Category     string      `json:"category"`
 	PriceIdr     int64       `json:"price_idr"`
 	Stock        int32       `json:"stock"`
-	CreatedBy    pgtype.Int4 `json:"created_by"`
+	CreatedBy    pgtype.Text `json:"created_by"`
 }
 
 // Products
@@ -144,20 +144,20 @@ RETURNING id, user_id, username, email, full_name, role, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	UserID       pgtype.Text `json:"user_id"`
-	Username     string      `json:"username"`
-	Email        string      `json:"email"`
-	FullName     pgtype.Text `json:"full_name"`
-	PasswordHash string      `json:"password_hash"`
-	Role         string      `json:"role"`
+	UserID       string `json:"user_id"`
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	FullName     string `json:"full_name"`
+	PasswordHash string `json:"password_hash"`
+	Role         string `json:"role"`
 }
 
 type CreateUserRow struct {
 	ID        int32              `json:"id"`
-	UserID    pgtype.Text        `json:"user_id"`
+	UserID    string             `json:"user_id"`
 	Username  string             `json:"username"`
 	Email     string             `json:"email"`
-	FullName  pgtype.Text        `json:"full_name"`
+	FullName  string             `json:"full_name"`
 	Role      string             `json:"role"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
@@ -373,6 +373,54 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 	return items, nil
 }
 
+const listUsers = `-- name: ListUsers :many
+SELECT user_id, username, email, full_name, role, created_at
+FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListUsersParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListUsersRow struct {
+	UserID    string             `json:"user_id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	FullName  string             `json:"full_name"`
+	Role      string             `json:"role"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
+	rows, err := q.db.Query(ctx, listUsers, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUsersRow
+	for rows.Next() {
+		var i ListUsersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Username,
+			&i.Email,
+			&i.FullName,
+			&i.Role,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const nextProductSequence = `-- name: NextProductSequence :one
 
 SELECT nextval('products_id_seq') as seq
@@ -454,10 +502,10 @@ type UpdateUserParams struct {
 
 type UpdateUserRow struct {
 	ID        int32              `json:"id"`
-	UserID    pgtype.Text        `json:"user_id"`
+	UserID    string             `json:"user_id"`
 	Username  string             `json:"username"`
 	Email     string             `json:"email"`
-	FullName  pgtype.Text        `json:"full_name"`
+	FullName  string             `json:"full_name"`
 	Role      string             `json:"role"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`

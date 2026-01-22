@@ -35,21 +35,21 @@ type Product struct {
 	ID           int32              `json:"id"`
 	ProductID    string             `json:"product_id"`
 	ProductName  string             `json:"product_name"`
-	SupplierName pgtype.Text        `json:"supplier_name"`
-	Category     pgtype.Text        `json:"category"`
+	SupplierName string             `json:"supplier_name"`
+	Category     string             `json:"category"`
 	PriceIdr     int64              `json:"price_idr"`
 	Stock        int32              `json:"stock"`
-	CreatedBy    pgtype.Int4        `json:"created_by"`
+	CreatedBy    pgtype.Text        `json:"created_by"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {
 	ID           int32              `json:"id"`
-	UserID       pgtype.Text        `json:"user_id"`
+	UserID       string             `json:"user_id"`
 	Username     string             `json:"username"`
 	Email        string             `json:"email"`
-	FullName     pgtype.Text        `json:"full_name"`
+	FullName     string             `json:"full_name"`
 	PasswordHash string             `json:"password_hash"`
 	Role         string             `json:"role"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`

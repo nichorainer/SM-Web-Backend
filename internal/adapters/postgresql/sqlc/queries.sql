@@ -10,6 +10,12 @@ RETURNING id, user_id, username, email, full_name, role, created_at, updated_at;
 -- name: CountUsers :one
 SELECT COUNT(*) FROM users;
 
+-- name: ListUsers :many
+SELECT user_id, username, email, full_name, role, created_at
+FROM users
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
 -- name: GetUserByUsernameOrEmail :one
 SELECT id, user_id, username, email, full_name, password_hash, role, created_at, updated_at
 FROM users
