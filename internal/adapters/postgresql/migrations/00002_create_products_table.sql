@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS products (
   category TEXT NOT NULL,
   price_idr BIGINT NOT NULL DEFAULT 0, 
   stock INTEGER NOT NULL DEFAULT 0,
-  created_by TEXT REFERENCES users(users_id) ON DELETE SET NULL,
+  created_by TEXT REFERENCES users(user_id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
