@@ -4,7 +4,6 @@ import (
   "encoding/json"
   "net/http"
   
-  "github.com/jackc/pgx/v5/pgtype"
   "github.com/go-chi/chi/v5"
   repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 )
@@ -68,22 +67,20 @@ func (s *Server) GetProductByID(w http.ResponseWriter, r *http.Request) {
 // CreateProduct creates a new product using sqlc-generated params.
 func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
   var req CreateProductRequest
-  dec := json.NewDecoder(r.Body)
-  dec.DisallowUnknownFields()
   if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
     http.Error(w, "invalid json", http.StatusBadRequest)
     return
   }
 
   arg := repo.CreateProductParams{
-    ProductID:    pgtype.Text{String: req.ProductID, Valid: req.ProductID != ""},
-		ProductName:  pgtype.Text{String: req.ProductName, Valid: req.ProductName != ""},
-		SupplierName: pgtype.Text{String: req.SupplierName, Valid: req.SupplierName != ""},
-		Category:     pgtype.Text{String: req.Category, Valid: req.Category != ""},
-		PriceIdr:     pgtype.Int8{Int: req.PriceIdr, Valid: true},
-		Stock:        pgtype.Int4{Int: req.Stock, Valid: true},
-		CreatedBy:    pgtype.Int4{Int: req.CreatedBy, Valid: true},
-    }
+    ProductID:    req.ProductID,
+    ProductName:  req.ProductName,
+    SupplierName: req.SupplierName,
+    Category:     req.Category,
+    PriceIdr:     req.PriceIdr,
+    Stock:        req.Stock,
+    CreatedBy:    req.CreatedBy,
+  }
 
     p, err := s.Repo.CreateProduct(r.Context(), arg)
     if err != nil {
