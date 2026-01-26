@@ -7,6 +7,10 @@ INSERT INTO users (user_id, username, email, full_name, password_hash, role)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, user_id, username, email, full_name, role, created_at, updated_at;
 
+-- -- name: CreateUser :exec
+-- INSERT INTO users (user_id, email, password_hash, role)
+-- VALUES ($1, $2, $3, $4);
+
 -- name: CountUsers :one
 SELECT COUNT(*) FROM users;
 

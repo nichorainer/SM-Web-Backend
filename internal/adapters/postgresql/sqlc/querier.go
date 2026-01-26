@@ -9,6 +9,9 @@ import (
 )
 
 type Querier interface {
+	// -- name: CreateUser :exec
+	// INSERT INTO users (user_id, email, password_hash, role)
+	// VALUES ($1, $2, $3, $4);
 	CountUsers(ctx context.Context) (int64, error)
 	// Orders
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)

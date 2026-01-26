@@ -12,9 +12,13 @@ import (
 )
 
 const countUsers = `-- name: CountUsers :one
+
 SELECT COUNT(*) FROM users
 `
 
+// -- name: CreateUser :exec
+// INSERT INTO users (user_id, email, password_hash, role)
+// VALUES ($1, $2, $3, $4);
 func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	row := q.db.QueryRow(ctx, countUsers)
 	var count int64

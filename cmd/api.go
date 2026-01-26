@@ -15,7 +15,7 @@ import (
 	
 )
 
-// mount
+// Mount Server
 func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 
@@ -23,19 +23,26 @@ func (app *application) mount() http.Handler {
     	Repo: repo.New(app.db),
   	}
 
-	// middleware
+	// Middleware
 	r.Use(middleware.RequestID)	// important for rate limiting
 	r.Use(middleware.RealIP) 	// import for rate limiting, analytics and tracing
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)	// recover from crashes
 	r.Use(middleware.RedirectSlashes) // redirect slashes to no slash URL
-
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	// Health Check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("all good"))
 	})
 
+	// Auth Routes (Public)
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", server.Register)
+		r.Post("/login", server.Login)
+	})
+
+	// Public Routes
 	// Products
 	r.Get("/products", server.ListProducts)
 	r.Get("/products/{id}", server.GetProductByID)
@@ -47,7 +54,21 @@ func (app *application) mount() http.Handler {
 	// Users
 	r.Get("/users", server.ListUsers)
 	r.Get("/users/{user_id}", server.GetUserByID)
-	r.Post("/users", server.CreateUser)
+
+	// --- Protected routes (JWT required) ---
+	r.Group(func(r chi.Router) {
+		r.Use(handlers.JWTMiddleware)
+
+		// Products
+		r.Post("/products", server.CreateProduct)   // create a new product
+		// r.Put("/products/{id}", server.UpdateProduct) // update product details
+		// r.Delete("/products/{id}", server.DeleteProduct) // delete a product
+
+		// Orders
+		r.Post("/orders", server.CreateOrder)       // place a new order
+		// r.Put("/orders/{id}", server.UpdateOrder)   // update an existing order
+		// r.Delete("/orders/{id}", server.DeleteOrder) // cancel/delete an order
+})
 
 	return r 
 }
