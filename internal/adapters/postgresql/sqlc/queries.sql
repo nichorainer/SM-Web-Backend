@@ -76,8 +76,17 @@ VALUES ($1, $2, $3, $4, $5)
 RETURNING id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at;
 
 -- name: CreateOrderItem :one
-INSERT INTO order_items (order_id, product_id, product_code, product_name, unit_price, quantity, line_total)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO order_items (
+  order_id,
+  product_id,
+  product_code,
+  product_name,
+  unit_price,
+  quantity,
+  line_total
+) VALUES (
+  $1, $2, $3, $4, $5, $6, $7
+)
 RETURNING id;
 
 -- name: ListOrders :many

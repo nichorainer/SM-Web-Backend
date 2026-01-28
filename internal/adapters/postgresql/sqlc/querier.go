@@ -19,7 +19,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	GetOrderByID(ctx context.Context, id int32) (Order, error)
 	GetProductByProductID(ctx context.Context, productID string) (Product, error)
-	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (User, error)
+	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (GetUserByUsernameOrEmailRow, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
@@ -29,7 +29,7 @@ type Querier interface {
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
-	UserByID(ctx context.Context, id int32) (User, error)
+	UserByID(ctx context.Context, id int32) (UserByIDRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

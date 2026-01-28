@@ -11,8 +11,8 @@ import (
 type Order struct {
 	ID          int32              `json:"id"`
 	OrderNumber string             `json:"order_number"`
-	CustomerID  pgtype.Int4        `json:"customer_id"`
-	CreatedBy   pgtype.Int4        `json:"created_by"`
+	CustomerID  pgtype.Text        `json:"customer_id"`
+	CreatedBy   pgtype.Text        `json:"created_by"`
 	TotalAmount pgtype.Int8        `json:"total_amount"`
 	Status      pgtype.Text        `json:"status"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
@@ -45,13 +45,13 @@ type Product struct {
 }
 
 type User struct {
-	ID           int32              `json:"id"`
-	UserID       string             `json:"user_id"`
-	Username     string             `json:"username"`
-	Email        string             `json:"email"`
-	FullName     string             `json:"full_name"`
-	PasswordHash string             `json:"password_hash"`
-	Role         string             `json:"role"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	ID           int32            `json:"id"`
+	UserID       string           `json:"user_id"`
+	FullName     string           `json:"full_name"`
+	Username     string           `json:"username"`
+	Email        string           `json:"email"`
+	PasswordHash string           `json:"password_hash"`
+	Role         string           `json:"role"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
 }

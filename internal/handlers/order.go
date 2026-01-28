@@ -36,12 +36,12 @@ func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	// 🔑 Extract user_id from JWT claims
 	_, claims, _ := jwtauth.FromContext(r.Context())
-	userIDClaim, ok := claims["user_id"].(float64) // JWT numbers are float64
-	if !ok {
+	userIDClaim, ok := claims["user_id"].(string)
+	if !ok || userIDClaim == "" {
 		http.Error(w, "invalid token claims", http.StatusUnauthorized)
 		return
 	}
-	userID := int32(userIDClaim)
+	userID := userIDClaim
 
 	// Generate order number (simple timestamp-based)
 	orderNumber := "ORD-" + strconv.FormatInt(time.Now().Unix(), 10)
@@ -49,8 +49,8 @@ func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	// Insert order
 	order, err := s.Repo.CreateOrder(r.Context(), repo.CreateOrderParams{
 		OrderNumber: orderNumber,
-		CustomerID:  pgtype.Int4{Int32: userID, Valid: true},
-		CreatedBy:   pgtype.Int4{Int32: userID, Valid: true},
+		CustomerID:  pgtype.Text{String: userID, Valid: true},
+		CreatedBy:   pgtype.Text{String: userID, Valid: true},
 		TotalAmount: pgtype.Int8{Int64: 0, Valid: true},
 		Status: pgtype.Text{String: "pending", Valid: true},
 	})

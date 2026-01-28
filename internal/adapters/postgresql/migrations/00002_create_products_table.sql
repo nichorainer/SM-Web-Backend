@@ -3,7 +3,7 @@
 -- 00002_create_products_table.sql
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
-  product_id TEXT UNIQUE NOT NULL,    -- generated ID (e.g., P-0001)
+  product_id TEXT UNIQUE NOT NULL,    -- generated ID
   product_name TEXT NOT NULL,
   supplier_name TEXT NOT NULL,
   category TEXT NOT NULL,
