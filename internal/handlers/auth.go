@@ -45,7 +45,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(APIResponse{
 			Status:  "error",
-			Message: "invalid email or password",
+			Message: "invalid email, username or password",
 		})
 		return
 	}
@@ -55,7 +55,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(APIResponse{
 			Status:  "error",
-			Message: "invalid email or password",
+			Message: "invalid email, username or password",
 		})
 		return
 	}
@@ -63,8 +63,8 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	// Build claims (iat, exp)
 	now := time.Now().UTC()
 	claims := jwt.MapClaims{
-		"user_id": user.UserID, // gunakan UUID sebagai identifier publik
-		"role":    user.Role,   // hanya untuk display
+		"user_id": user.UserID,
+		"role":    user.Role, 
 		"iat":     now.Unix(),
 		"exp":     now.Add(24 * time.Hour).Unix(),
 	}
