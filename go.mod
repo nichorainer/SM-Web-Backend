@@ -12,6 +12,7 @@ require (
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
+	github.com/go-chi/cors v1.2.2 // indirect
 	github.com/go-chi/jwtauth/v5 v5.3.3 // indirect
 	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect

@@ -24,11 +24,10 @@ func (s *Server) RegisterUserRoutes(r chi.Router) {
 
 // CreateUserRequest is the expected JSON body for creating a user.
 type CreateUserRequest struct {
+	FullName string `json:"full_name"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
-	FullName string `json:"full_name"`
 	Password string `json:"password"`
-	Role     string `json:"role"` // e.g., "admin" or "staff"
 }
 
 // Standard response API
@@ -127,7 +126,6 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
     req.Username = strings.TrimSpace(req.Username)
     req.Email = strings.TrimSpace(req.Email)
     req.FullName = strings.TrimSpace(req.FullName)
-    req.Role = strings.TrimSpace(req.Role)
 
 	// Basic validation
     if req.Username == "" || req.Email == "" || req.Password == "" {
@@ -181,13 +179,13 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     arg := repo.CreateUserParams{
-        UserID:       uid,
-        Username:     req.Username,
-        Email:        req.Email,
-        FullName:     req.FullName,
-        PasswordHash: hashed,
-        Role:         req.Role,
-    }
+		UserID:       uid,
+		FullName:     req.FullName,
+		Username:     req.Username,
+		Email:        req.Email,
+		PasswordHash: string(hashed),
+		Role:         "admin", // default role
+	}
 
     u, err := s.Repo.CreateUser(r.Context(), arg)
     if err != nil {
@@ -205,6 +203,7 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(APIResponse{
         Status: "success",
         Data:   u,
+		Message: "user registered",
     })
 }
 

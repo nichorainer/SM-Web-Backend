@@ -12,7 +12,7 @@ import (
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/handlers"
-	
+	"github.com/go-chi/cors"
 )
 
 // Mount Server
@@ -22,6 +22,16 @@ func (app *application) mount() http.Handler {
 	server := handlers.Server{
     	Repo: repo.New(app.db),
   	}
+
+	// --- CORS middleware ---
+    // Allow FE (React dev server) to call BE
+    r.Use(cors.Handler(cors.Options{
+        AllowedOrigins:   []string{"http://localhost:5173"}, // FE dev server
+        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+        AllowCredentials: true,
+    }))
+    // --- End CORS ---
 
 	// Middleware
 	r.Use(middleware.RequestID)	// important for rate limiting
@@ -38,11 +48,12 @@ func (app *application) mount() http.Handler {
 
 	// Auth Routes (Public)
 	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", server.Register)
+		r.Post("/register", server.CreateUser)
 		r.Post("/login", server.Login)
 	})
 
 	// Public Routes
+	
 	// Products
 	r.Get("/products", server.ListProducts)
 	r.Get("/products/{id}", server.GetProductByID)
