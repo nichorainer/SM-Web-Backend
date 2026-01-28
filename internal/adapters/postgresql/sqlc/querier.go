@@ -9,10 +9,6 @@ import (
 )
 
 type Querier interface {
-	// -- name: CreateUser :exec
-	// INSERT INTO users (user_id, email, password_hash, role)
-	// VALUES ($1, $2, $3, $4);
-	CountUsers(ctx context.Context) (int64, error)
 	// Orders
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
 	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (int32, error)
@@ -23,7 +19,6 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	GetOrderByID(ctx context.Context, id int32) (Order, error)
 	GetProductByProductID(ctx context.Context, productID string) (Product, error)
-	GetUserByID(ctx context.Context, id int32) (User, error)
 	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (User, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
@@ -34,6 +29,7 @@ type Querier interface {
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
 	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
+	UserByID(ctx context.Context, id int32) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)

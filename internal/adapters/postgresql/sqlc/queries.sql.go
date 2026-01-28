@@ -11,21 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countUsers = `-- name: CountUsers :one
-
-SELECT COUNT(*) FROM users
-`
-
-// -- name: CreateUser :exec
-// INSERT INTO users (user_id, email, password_hash, role)
-// VALUES ($1, $2, $3, $4);
-func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countUsers)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const createOrder = `-- name: CreateOrder :one
 
 INSERT INTO orders (order_number, customer_id, created_by, total_amount, status)
@@ -234,30 +219,6 @@ func (q *Queries) GetProductByProductID(ctx context.Context, productID string) (
 		&i.PriceIdr,
 		&i.Stock,
 		&i.CreatedBy,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, user_id, username, email, full_name, password_hash, role, created_at, updated_at
-FROM users
-WHERE id = $1
-LIMIT 1
-`
-
-func (q *Queries) GetUserByID(ctx context.Context, id int32) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Username,
-		&i.Email,
-		&i.FullName,
-		&i.PasswordHash,
-		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -549,4 +510,28 @@ type UpdateUserRoleParams struct {
 func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error {
 	_, err := q.db.Exec(ctx, updateUserRole, arg.Role, arg.ID)
 	return err
+}
+
+const userByID = `-- name: UserByID :one
+SELECT id, user_id, username, email, full_name, password_hash, role, created_at, updated_at
+FROM users
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) UserByID(ctx context.Context, id int32) (User, error) {
+	row := q.db.QueryRow(ctx, userByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Username,
+		&i.Email,
+		&i.FullName,
+		&i.PasswordHash,
+		&i.Role,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
