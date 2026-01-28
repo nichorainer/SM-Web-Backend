@@ -114,7 +114,7 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-        log.Println("invalid request body:", err) // ✅ logging error
+        log.Println("invalid request body:", err)
         w.WriteHeader(http.StatusBadRequest)
         json.NewEncoder(w).Encode(APIResponse{
             Status:  "error",
@@ -122,6 +122,7 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
         })
         return
     }
+
 	// Input sanitation to trim spaces in email and username
     req.Username = strings.TrimSpace(req.Username)
     req.Email = strings.TrimSpace(req.Email)
@@ -169,7 +170,7 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 	// hash password
 	hashed, err := hashPassword(req.Password)
     if err != nil {
-        log.Println("failed to hash password:", err) // ✅ logging error
+        log.Println("failed to hash password:", err)
         w.WriteHeader(http.StatusInternalServerError)
         json.NewEncoder(w).Encode(APIResponse{
             Status:  "error",
@@ -249,7 +250,7 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Get user by email
+    // Get user by email/username
     user, err := s.Repo.GetUserByUsernameOrEmail(r.Context(), repo.GetUserByUsernameOrEmailParams{
         Username: "",
         Email:    req.Email,

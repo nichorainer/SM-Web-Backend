@@ -4,8 +4,8 @@
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
   order_number VARCHAR(50) UNIQUE NOT NULL,
-  customer_id INTEGER REFERENCES users(user_id) ON DELETE SET NULL,
-  created_by INTEGER REFERENCES users(user_id) ON DELETE SET NULL,  -- staff/admin who created the order
+  customer_id TEXT REFERENCES users(user_id) ON DELETE SET NULL,
+  created_by TEXT REFERENCES users(user_id) ON DELETE SET NULL,  -- staff/admin who created the order
   total_amount BIGINT DEFAULT 0,
   status VARCHAR(50) DEFAULT 'pending',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
