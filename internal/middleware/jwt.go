@@ -2,6 +2,7 @@ package middleware
 
 import (
     "net/http"
+    "log"
 
     "github.com/go-chi/jwtauth/v5"
 )
@@ -26,6 +27,11 @@ func JWTMiddleware(next http.Handler) http.Handler {
 // ExtractClaims extracts JWT claims from request
 func ExtractClaims(r *http.Request) (map[string]interface{}, error) {
     _, claims, err := jwtauth.FromContext(r.Context())
+    if err != nil {
+        log.Printf("JWT ExtractClaims error: %v", err)
+        return nil, err
+    }
+    log.Printf("JWT claims: %+v", claims)
     return claims, err
 }
 

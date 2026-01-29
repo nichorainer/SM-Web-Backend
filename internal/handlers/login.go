@@ -98,89 +98,94 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser handles updating user profile
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	// Ambil id dari URL
-	userIdStr := chi.URLParam(r, "id")
-	idInt, err := strconv.Atoi(userIdStr)
-	if err != nil {
-		log.Printf("Invalid user id: %v", err)
-		http.Error(w, "Invalid user id", http.StatusBadRequest)
-		return
-	}
+    log.Println("UpdateUser handler triggered") // cek apakah handler jalan
+	
 
-	// Decode body
-	var input models.User
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		log.Printf("Invalid request body: %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
-	}
+    // Ambil id dari URL
+    userIdStr := chi.URLParam(r, "id")
+    idInt, err := strconv.Atoi(userIdStr)
+    if err != nil {
+        log.Printf("Invalid user id: %v", err)
+        http.Error(w, "Invalid user id", http.StatusBadRequest)
+        return
+    }
 
-	// Extract claims dari JWT
-	claims, err := middleware.ExtractClaims(r)
-	if err != nil {
-		log.Printf("Unauthorized: %v", err)
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
+    // Decode body
+    var input models.User
+    if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+        log.Printf("Invalid request body: %v", err)
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
 
-	// Kalau pakai /users/me
-	if userIdStr == "me" {
-		idInt = int(claims["id"].(float64)) // JWT numeric claim dibaca float64
-	}
+    // Extract claims dari JWT
+    claims, err := middleware.ExtractClaims(r)
+    if err != nil {
+        log.Printf("Unauthorized: %v", err)
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
 
-	// Hash password kalau ada
-	var hashedPassword []byte
-	if input.Password != "" {
-		hashedPassword, err = bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
-		if err != nil {
-			log.Printf("Failed to hash password: %v", err)
-			http.Error(w, "Failed to hash password", http.StatusInternalServerError)
-			return
-		}
-	}
+    // Kalau pakai /users/me
+    if userIdStr == "me" {
+        idInt = int(claims["id"].(float64)) // JWT numeric claim dibaca float64
+    }
 
-	db := config.GetDB()
+    // Hash password kalau ada
+    var hashedPassword string
+    if input.Password != "" {
+        hp, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+        if err != nil {
+            log.Printf("Failed to hash password: %v", err)
+            http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+            return
+        }
+        hashedPassword = string(hp)
+    }
 
-	// Jalankan query update
-	_, err = db.Exec(
-		r.Context(),
-		`UPDATE users
-		 SET full_name = COALESCE(NULLIF($2, ''), full_name),
-		     username   = COALESCE(NULLIF($3, ''), username),
-		     email      = COALESCE(NULLIF($4, ''), email),
-		     password_hash = COALESCE(NULLIF($5, ''), password_hash),
-		     updated_at = NOW()
-		 WHERE id = $1`,
-		idInt, input.FullName, input.Username, input.Email, string(hashedPassword),
-	)
-	if err != nil {
-		log.Printf("UpdateUser Exec error: %v", err)
-		http.Error(w, "Failed to update user", http.StatusInternalServerError)
-		return
-	}
+    db := config.GetDB()
 
-	// Ambil kembali user yang sudah diupdate
-	row := db.QueryRow(
-		r.Context(),
-		`SELECT id, full_name, username, email
-		 FROM users WHERE id=$1`,
-		idInt,
-	)
+    // Jalankan query update
+    _, err = db.Exec(
+        r.Context(),
+        `UPDATE users
+         SET full_name = COALESCE(NULLIF($2, ''), full_name),
+             username   = COALESCE(NULLIF($3, ''), username),
+             email      = COALESCE(NULLIF($4, ''), email),
+             password_hash = COALESCE(NULLIF($5, ''), password_hash),
+             updated_at = NOW()
+         WHERE id = $1`,
+        idInt, input.FullName, input.Username, input.Email, hashedPassword,
+    )
+    if err != nil {
+        log.Printf("UpdateUser Exec error: %v", err)
+        http.Error(w, "Failed to update user", http.StatusInternalServerError)
+        return
+    }
 
-	var updated models.User
-	if err := row.Scan(&updated.ID, &updated.FullName, &updated.Username, &updated.Email); err != nil {
-		log.Printf("UpdateUser Scan error: %v", err)
-		http.Error(w, "Failed to fetch updated user", http.StatusInternalServerError)
-		return
-	}
+    // Ambil kembali user yang sudah diupdate
+    row := db.QueryRow(
+        r.Context(),
+        `SELECT id, full_name, username, email
+         FROM users WHERE id=$1`,
+        idInt,
+    )
 
-	// Return JSON hanya 3 field
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "success",
-		"data": map[string]interface{}{
-			"full_name": updated.FullName,
-			"username":  updated.Username,
-			"email":     updated.Email,
-		},
-	})
+    var updated models.User
+    if err := row.Scan(&updated.ID, &updated.FullName, &updated.Username, &updated.Email); err != nil {
+        log.Printf("UpdateUser Scan error: %v", err)
+        http.Error(w, "Failed to fetch updated user", http.StatusInternalServerError)
+        return
+    }
+
+    // Return JSON hanya 3 field
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "status": "success",
+        "data": map[string]interface{}{
+            "full_name": updated.FullName,
+            "username":  updated.Username,
+            "email":     updated.Email,
+        },
+    })
 }
