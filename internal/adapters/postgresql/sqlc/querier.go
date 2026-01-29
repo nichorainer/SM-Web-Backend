@@ -28,7 +28,6 @@ type Querier interface {
 	NextProductSequence(ctx context.Context) (int64, error)
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
-	UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error
 	UserByID(ctx context.Context, id int32) (UserByIDRow, error)
 }
 

@@ -475,7 +475,7 @@ SET username = COALESCE(NULLIF($2, ''), username),
     password_hash = COALESCE(NULLIF($5, ''), password_hash),
     updated_at = now()
 WHERE id = $1
-RETURNING id, user_id, username, email, full_name, role, created_at, updated_at
+RETURNING id, full_name, username, email
 `
 
 type UpdateUserParams struct {
@@ -487,14 +487,10 @@ type UpdateUserParams struct {
 }
 
 type UpdateUserRow struct {
-	ID        int32            `json:"id"`
-	UserID    string           `json:"user_id"`
-	Username  string           `json:"username"`
-	Email     string           `json:"email"`
-	FullName  string           `json:"full_name"`
-	Role      string           `json:"role"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	ID       int32  `json:"id"`
+	FullName string `json:"full_name"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
@@ -508,29 +504,11 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 	var i UpdateUserRow
 	err := row.Scan(
 		&i.ID,
-		&i.UserID,
+		&i.FullName,
 		&i.Username,
 		&i.Email,
-		&i.FullName,
-		&i.Role,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const updateUserRole = `-- name: UpdateUserRole :exec
-UPDATE users SET role = $1, updated_at = now() WHERE id = $2
-`
-
-type UpdateUserRoleParams struct {
-	Role string `json:"role"`
-	ID   int32  `json:"id"`
-}
-
-func (q *Queries) UpdateUserRole(ctx context.Context, arg UpdateUserRoleParams) error {
-	_, err := q.db.Exec(ctx, updateUserRole, arg.Role, arg.ID)
-	return err
 }
 
 const userByID = `-- name: UserByID :one
