@@ -6,17 +6,14 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/go-chi/jwtauth/v5"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/go-chi/chi/v5"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
+	"github.com/yourorg/backend-go/internal/middleware"
+	"github.com/yourorg/backend-go/internal/config"
+	"github.com/yourorg/backend-go/internal/models"
 )
-
-// secret (move to env/config in production)
-var jwtSecret = []byte("your-secret-key")
-
-// jwtauth instance for middleware verification (uses same secret)
-var tokenAuth = jwtauth.New("HS256", jwtSecret, nil)
 
 // Request payloads
 type AuthRequest struct {
@@ -71,7 +68,7 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Create token and sign it
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtSecret)
+	tokenString, err := token.SignedString(middleware.GetSecret())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIResponse{
@@ -97,7 +94,63 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// JWTMiddleware verifies token and attaches user info to context
-func JWTMiddleware(next http.Handler) http.Handler {
-	return jwtauth.Authenticator(tokenAuth)(jwtauth.Verifier(tokenAuth)(next))
+// UpdateUser handles updating user profile
+func UpdateUser(w http.ResponseWriter, r *http.Request) {
+    userId := chi.URLParam(r, "id")
+
+    var input models.User
+    if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    claims, err := middleware.ExtractClaims(r)
+    if err != nil {
+        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+        return
+    }
+
+    if userId == "me" {
+        userId = claims["user_id"].(string)
+    }
+
+    db := config.GetDB()
+    // Jalankan query update ke PostgreSQL
+    _, err = db.Exec(
+        r.Context(),
+        `UPDATE users 
+        SET full_name=$1, username=$2, email=$3, password=$4, role=$5, avatar_url=$6 
+        WHERE id=$7`,
+        input.FullName,
+        input.Username,
+        input.Email,
+        input.Password, // pastikan sudah di-hash sebelumnya
+        input.Role,
+        input.AvatarUrl,
+        userId,
+    )
+
+    if err != nil {
+        http.Error(w, "Failed to update user", http.StatusInternalServerError)
+        return
+    }
+
+    // Ambil kembali user yang sudah diupdate
+    row := db.QueryRow(
+        r.Context(),
+        `SELECT id, full_name, username, email, role, avatar_url 
+        FROM users WHERE id=$1`,
+        userId,
+    )
+
+    var updated models.User
+    if err := row.Scan(&updated.ID, &updated.FullName, &updated.Username, &updated.Email, &updated.Role, &updated.AvatarUrl); err != nil {
+        http.Error(w, "Failed to fetch updated user", http.StatusInternalServerError)
+        return
+    }
+
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "status": "success",
+        "data":   updated,
+    })
 }

@@ -7,12 +7,13 @@ import (
 
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
+	"github.com/go-chi/cors"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/handlers"
-	"github.com/go-chi/cors"
+	appmiddleware "github.com/yourorg/backend-go/internal/middleware"
 )
 
 // Mount Server
@@ -33,13 +34,13 @@ func (app *application) mount() http.Handler {
     }))
     // --- End CORS ---
 
-	// Middleware
-	r.Use(middleware.RequestID)	// important for rate limiting
-	r.Use(middleware.RealIP) 	// import for rate limiting, analytics and tracing
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)	// recover from crashes
-	r.Use(middleware.RedirectSlashes) // redirect slashes to no slash URL
-	r.Use(middleware.Timeout(60 * time.Second))
+	// Global Middleware
+	r.Use(chimiddleware.RequestID)	// important for rate limiting
+	r.Use(chimiddleware.RealIP) 	// import for rate limiting, analytics and tracing
+	r.Use(chimiddleware.Logger)
+	r.Use(chimiddleware.Recoverer)	// recover from crashes
+	r.Use(chimiddleware.RedirectSlashes) // redirect slashes to no slash URL
+	r.Use(chimiddleware.Timeout(60 * time.Second))
 
 	// Health Check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -51,8 +52,6 @@ func (app *application) mount() http.Handler {
 		r.Post("/register", server.CreateUser)
 		r.Post("/login", server.Login)
 	})
-
-	// Public Routes
 	
 	// Products
 	r.Get("/products", server.ListProducts)
@@ -61,27 +60,18 @@ func (app *application) mount() http.Handler {
 
 	// Orders
 	r.Get("/orders/{id}", server.GetOrderByID)
+	r.Post("/orders", server.CreateOrder)
 
 	// Users
 	r.Get("/users", server.ListUsers)
 	r.Get("/users/{user_id}", server.GetUserByID)
+	// Users (protected endpoints)
+    r.Group(func(r chi.Router) {
+        r.Use(appmiddleware.JWTMiddleware)
+        r.Put("/users/{id}", handlers.UpdateUser)
+    })
 
-	// --- Protected routes (JWT required) ---
-	r.Group(func(r chi.Router) {
-		r.Use(handlers.JWTMiddleware)
-
-		// Products
-		r.Post("/products", server.CreateProduct)   // create a new product
-		// r.Put("/products/{id}", server.UpdateProduct) // update product details
-		// r.Delete("/products/{id}", server.DeleteProduct) // delete a product
-
-		// Orders
-		r.Post("/orders", server.CreateOrder)       // place a new order
-		// r.Put("/orders/{id}", server.UpdateOrder)   // update an existing order
-		// r.Delete("/orders/{id}", server.DeleteOrder) // cancel/delete an order
-})
-
-	return r 
+	return r
 }
 
 // run

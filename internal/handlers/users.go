@@ -208,6 +208,7 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
     })
 }
 
+
 // hashPassword hashes a plaintext password using bcrypt.
 func hashPassword(pw string) (string, error) {
     b, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
