@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/yourorg/backend-go/internal/env"
+	appmiddleware "github.com/yourorg/backend-go/internal/middleware"
 )
 
 func main() {
@@ -31,6 +32,10 @@ ctx := context.Background()
 	defer conn.Close(ctx)
 
 	logger.Info("Database connected", "dsn", cfg.db.dsn)
+	
+	// Initiate JWT Secret
+    appmiddleware.InitJWT(env.GetString("JWT_SECRET", "supersecret"))
+
 
 	api := application{
 		config: cfg,

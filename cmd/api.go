@@ -69,7 +69,14 @@ func (app *application) mount() http.Handler {
     r.Group(func(r chi.Router) {
         r.Use(appmiddleware.JWTMiddleware)
         r.Put("/users/{id}", handlers.UpdateUser)
+		r.Put("/users/me", handlers.UpdateUser)
     })
+
+	// Log running routes
+	chi.Walk(r, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		log.Printf("[ROUTE] %s %s", method, route)
+		return nil
+	})
 
 	return r
 }

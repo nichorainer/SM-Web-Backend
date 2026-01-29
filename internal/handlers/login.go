@@ -61,7 +61,6 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().UTC()
 	claims := jwt.MapClaims{
 		"user_id": user.UserID,
-		"role":    user.Role, 
 		"iat":     now.Unix(),
 		"exp":     now.Add(24 * time.Hour).Unix(),
 	}
@@ -130,7 +129,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		WHERE id=$1`,
 		userId, input.FullName, input.Username, input.Email, hashedPassword,
 	)
-	
+
     if err != nil {
         http.Error(w, "Failed to update user", http.StatusInternalServerError)
         return
@@ -139,7 +138,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     // Ambil kembali user yang sudah diupdate
     row := db.QueryRow(
         r.Context(),
-        `SELECT id, full_name, username, email, role, avatar_url 
+        `SELECT id, full_name, username, email, password_hash
         FROM users WHERE id=$1`,
         userId,
     )
