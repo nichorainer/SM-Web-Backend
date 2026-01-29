@@ -35,9 +35,6 @@ SET username = COALESCE(NULLIF($2, ''), username),
 WHERE id = $1
 RETURNING id, user_id, username, email, full_name, role, created_at, updated_at;
 
--- name: UpdateUserRole :exec
-UPDATE users SET role = $1, updated_at = now() WHERE id = $2;
-
 -- Products
 
 -- name: CreateProduct :one

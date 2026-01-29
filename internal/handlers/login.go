@@ -114,22 +114,23 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
         userId = claims["user_id"].(string)
     }
 
+    // Hash password sebelum simpan
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+    if err != nil {
+        http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+        return
+    }
+
     db := config.GetDB()
     // Jalankan query update ke PostgreSQL
-    _, err = db.Exec(
-        r.Context(),
-        `UPDATE users 
-        SET full_name=$1, username=$2, email=$3, password=$4, role=$5, avatar_url=$6 
-        WHERE id=$7`,
-        input.FullName,
-        input.Username,
-        input.Email,
-        input.Password, // pastikan sudah di-hash sebelumnya
-        input.Role,
-        input.AvatarUrl,
-        userId,
-    )
-
+	_, err = db.Exec(
+		r.Context(),
+		`UPDATE users 
+		SET full_name=$2, username=$3, email=$4, password_hash=$5, updated_at=NOW()
+		WHERE id=$1`,
+		userId, input.FullName, input.Username, input.Email, hashedPassword,
+	)
+	
     if err != nil {
         http.Error(w, "Failed to update user", http.StatusInternalServerError)
         return
