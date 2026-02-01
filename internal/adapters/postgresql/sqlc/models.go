@@ -9,26 +9,14 @@ import (
 )
 
 type Order struct {
-	ID          int32              `json:"id"`
-	OrderNumber string             `json:"order_number"`
-	CustomerID  pgtype.Text        `json:"customer_id"`
-	CreatedBy   pgtype.Text        `json:"created_by"`
-	TotalAmount pgtype.Int8        `json:"total_amount"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-}
-
-type OrderItem struct {
-	ID          int32              `json:"id"`
-	OrderID     pgtype.Int4        `json:"order_id"`
-	ProductID   pgtype.Int4        `json:"product_id"`
-	ProductCode pgtype.Text        `json:"product_code"`
-	ProductName pgtype.Text        `json:"product_name"`
-	UnitPrice   pgtype.Int8        `json:"unit_price"`
-	Quantity    pgtype.Int4        `json:"quantity"`
-	LineTotal   pgtype.Int8        `json:"line_total"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ID           int32              `json:"id"`
+	OrderNumber  string             `json:"order_number"`
+	CustomerName string             `json:"customer_name"`
+	TotalAmount  pgtype.Int4        `json:"total_amount"`
+	Status       string             `json:"status"`
+	CreatedBy    pgtype.Text        `json:"created_by"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Product struct {

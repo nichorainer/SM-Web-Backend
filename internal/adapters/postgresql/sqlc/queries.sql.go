@@ -13,80 +13,40 @@ import (
 
 const createOrder = `-- name: CreateOrder :one
 
-INSERT INTO orders (order_number, customer_id, created_by, total_amount, status)
+INSERT INTO orders (order_number, customer_name, total_amount, status, created_by)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+RETURNING id, order_number, customer_name, total_amount, status, created_by, created_at, updated_at
 `
 
 type CreateOrderParams struct {
-	OrderNumber string      `json:"order_number"`
-	CustomerID  pgtype.Text `json:"customer_id"`
-	CreatedBy   pgtype.Text `json:"created_by"`
-	TotalAmount pgtype.Int8 `json:"total_amount"`
-	Status      pgtype.Text `json:"status"`
+	OrderNumber  string      `json:"order_number"`
+	CustomerName string      `json:"customer_name"`
+	TotalAmount  pgtype.Int4 `json:"total_amount"`
+	Status       string      `json:"status"`
+	CreatedBy    pgtype.Text `json:"created_by"`
 }
 
 // Orders
 func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
 	row := q.db.QueryRow(ctx, createOrder,
 		arg.OrderNumber,
-		arg.CustomerID,
-		arg.CreatedBy,
+		arg.CustomerName,
 		arg.TotalAmount,
 		arg.Status,
+		arg.CreatedBy,
 	)
 	var i Order
 	err := row.Scan(
 		&i.ID,
 		&i.OrderNumber,
-		&i.CustomerID,
-		&i.CreatedBy,
+		&i.CustomerName,
 		&i.TotalAmount,
 		&i.Status,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const createOrderItem = `-- name: CreateOrderItem :one
-INSERT INTO order_items (
-  order_id,
-  product_id,
-  product_code,
-  product_name,
-  unit_price,
-  quantity,
-  line_total
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
-)
-RETURNING id
-`
-
-type CreateOrderItemParams struct {
-	OrderID     pgtype.Int4 `json:"order_id"`
-	ProductID   pgtype.Int4 `json:"product_id"`
-	ProductCode pgtype.Text `json:"product_code"`
-	ProductName pgtype.Text `json:"product_name"`
-	UnitPrice   pgtype.Int8 `json:"unit_price"`
-	Quantity    pgtype.Int4 `json:"quantity"`
-	LineTotal   pgtype.Int8 `json:"line_total"`
-}
-
-func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (int32, error) {
-	row := q.db.QueryRow(ctx, createOrderItem,
-		arg.OrderID,
-		arg.ProductID,
-		arg.ProductCode,
-		arg.ProductName,
-		arg.UnitPrice,
-		arg.Quantity,
-		arg.LineTotal,
-	)
-	var id int32
-	err := row.Scan(&id)
-	return id, err
 }
 
 const createProduct = `-- name: CreateProduct :one
@@ -187,22 +147,22 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+SELECT id, order_number, customer_name, total_amount, status, created_by, created_at, updated_at
 FROM orders
-WHERE id = $1
+WHERE order_number = $1
 LIMIT 1
 `
 
-func (q *Queries) GetOrderByID(ctx context.Context, id int32) (Order, error) {
-	row := q.db.QueryRow(ctx, getOrderByID, id)
+func (q *Queries) GetOrderByID(ctx context.Context, orderNumber string) (Order, error) {
+	row := q.db.QueryRow(ctx, getOrderByID, orderNumber)
 	var i Order
 	err := row.Scan(
 		&i.ID,
 		&i.OrderNumber,
-		&i.CustomerID,
-		&i.CreatedBy,
+		&i.CustomerName,
 		&i.TotalAmount,
 		&i.Status,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -276,9 +236,17 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUse
 }
 
 const listOrders = `-- name: ListOrders :many
-SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+SELECT 
+  id, 
+  order_number, 
+  customer_name, 
+  total_amount, 
+  status, 
+  created_by, 
+  created_at, 
+  updated_at
 FROM orders
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -299,10 +267,10 @@ func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order
 		if err := rows.Scan(
 			&i.ID,
 			&i.OrderNumber,
-			&i.CustomerID,
-			&i.CreatedBy,
+			&i.CustomerName,
 			&i.TotalAmount,
 			&i.Status,
+			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

@@ -68,34 +68,28 @@ RETURNING id, product_id, product_name, supplier_name, category, price_idr, stoc
 -- Orders
 
 -- name: CreateOrder :one
-INSERT INTO orders (order_number, customer_id, created_by, total_amount, status)
+INSERT INTO orders (order_number, customer_name, total_amount, status, created_by)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at;
-
--- name: CreateOrderItem :one
-INSERT INTO order_items (
-  order_id,
-  product_id,
-  product_code,
-  product_name,
-  unit_price,
-  quantity,
-  line_total
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
-)
-RETURNING id;
+RETURNING id, order_number, customer_name, total_amount, status, created_by, created_at, updated_at;
 
 -- name: ListOrders :many
-SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+SELECT 
+  id, 
+  order_number, 
+  customer_name, 
+  total_amount, 
+  status, 
+  created_by, 
+  created_at, 
+  updated_at
 FROM orders
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $1 OFFSET $2;
 
 -- name: GetOrderByID :one
-SELECT id, order_number, customer_id, created_by, total_amount, status, created_at, updated_at
+SELECT id, order_number, customer_name, total_amount, status, created_by, created_at, updated_at
 FROM orders
-WHERE id = $1
+WHERE order_number = $1
 LIMIT 1;
 
 -- Utility queries

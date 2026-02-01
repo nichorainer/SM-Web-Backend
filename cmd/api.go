@@ -5,11 +5,10 @@ import (
 	"net/http"
 	"time"
 
-
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/jackc/pgx/v5"
 	"github.com/go-chi/cors"
+	"github.com/jackc/pgx/v5"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/handlers"
@@ -21,24 +20,24 @@ func (app *application) mount() http.Handler {
 	r := chi.NewRouter()
 
 	server := handlers.Server{
-    	Repo: repo.New(app.db),
-  	}
+		Repo: repo.New(app.db),
+	}
 
 	// --- CORS middleware ---
-    // Allow FE (React dev server) to call BE
-    r.Use(cors.Handler(cors.Options{
-        AllowedOrigins:   []string{"http://localhost:5173"}, // FE dev server
-        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-        AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
-        AllowCredentials: true,
-    }))
-    // --- End CORS ---
+	// Allow FE (React dev server) to call BE
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173"}, // FE dev server
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
+		AllowCredentials: true,
+	}))
+	// --- End CORS ---
 
 	// Global Middleware
-	r.Use(chimiddleware.RequestID)	// important for rate limiting
-	r.Use(chimiddleware.RealIP) 	// import for rate limiting, analytics and tracing
+	r.Use(chimiddleware.RequestID) // important for rate limiting
+	r.Use(chimiddleware.RealIP)    // import for rate limiting, analytics and tracing
 	r.Use(chimiddleware.Logger)
-	r.Use(chimiddleware.Recoverer)	// recover from crashes
+	r.Use(chimiddleware.Recoverer)       // recover from crashes
 	r.Use(chimiddleware.RedirectSlashes) // redirect slashes to no slash URL
 	r.Use(chimiddleware.Timeout(60 * time.Second))
 
@@ -52,7 +51,7 @@ func (app *application) mount() http.Handler {
 		r.Post("/register", server.CreateUser)
 		r.Post("/login", server.Login)
 	})
-	
+
 	// Products (mounted under /api)
 	r.Route("/api", func(r chi.Router) {
 		// List and create products at /api/products
@@ -64,18 +63,24 @@ func (app *application) mount() http.Handler {
 	})
 
 	// Orders
-	r.Get("/orders/{id}", server.GetOrderByID)
+	// r.Route("/api", func(r chi.Router) {
+	// 	// List and create orders
+	// 	r.Get("/orders/{id}", server.GetOrderByID)
+	// 	r.Post("/orders", server.CreateOrder)
+	// })
+
+	r.Get("/orders", server.ListOrders)
 	r.Post("/orders", server.CreateOrder)
 
 	// Users
 	r.Get("/users", server.ListUsers)
 	r.Get("/users/{user_id}", server.GetUserByID)
 	// Users (protected endpoints)
-    r.Group(func(r chi.Router) {
-        r.Use(appmiddleware.JWTMiddleware)
-        r.Put("/users/{id}", handlers.UpdateUser)
-		r.Put("/users/me", handlers.UpdateUser)
-    })
+	r.Group(func(r chi.Router) {
+		r.Use(appmiddleware.JWTMiddleware)
+		r.Post("/users/{id}", handlers.UpdateUser)
+		r.Post("/users/me", handlers.UpdateUser)
+	})
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MethodNotAllowed: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
@@ -93,11 +98,11 @@ func (app *application) mount() http.Handler {
 // run
 func (app *application) run(h http.Handler) error {
 	srv := &http.Server{
-		Addr: 			app.config.addr,
-		Handler: 		h,
-		WriteTimeout: 	time.Second * 30,
-		ReadTimeout: 	time.Second * 10,
-		IdleTimeout: 	time.Minute,
+		Addr:         app.config.addr,
+		Handler:      h,
+		WriteTimeout: time.Second * 30,
+		ReadTimeout:  time.Second * 10,
+		IdleTimeout:  time.Minute,
 	}
 
 	log.Printf("Server has started at addr %s", app.config.addr)
@@ -105,17 +110,16 @@ func (app *application) run(h http.Handler) error {
 	return srv.ListenAndServe()
 }
 
-
 type application struct {
 	config config
-	
+
 	// db driver
 	db *pgx.Conn
 }
 
 type config struct {
 	addr string
-	db dbConfig
+	db   dbConfig
 }
 
 type dbConfig struct {

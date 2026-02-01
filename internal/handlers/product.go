@@ -74,17 +74,18 @@ func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
         return
     }
 
- arg := repo.CreateProductParams{
-    ProductID:    req.ProductID,
-    ProductName:  req.ProductName,
-    SupplierName: req.SupplierName,
-    Category:     req.Category,
-    PriceIdr:     req.PriceIdr,
-    Stock:        req.Stock,
-    CreatedBy:    pgtype.Text{String: req.CreatedBy, Valid: req.CreatedBy != ""},
-}
+    arg := repo.CreateProductParams{
+        ProductID:    req.ProductID,
+        ProductName:  req.ProductName,
+        SupplierName: req.SupplierName,
+        Category:     req.Category,
+        PriceIdr:     req.PriceIdr,
+        Stock:        req.Stock,
+        CreatedBy:    pgtype.Text{String: req.CreatedBy, Valid: req.CreatedBy != ""},
+    }
 
     p, err := s.Repo.CreateProduct(r.Context(), arg)
+    
     if err != nil {
         http.Error(w, "failed to create product: "+err.Error(), http.StatusInternalServerError)
         return

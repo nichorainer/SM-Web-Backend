@@ -11,13 +11,12 @@ import (
 type Querier interface {
 	// Orders
 	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
-	CreateOrderItem(ctx context.Context, arg CreateOrderItemParams) (int32, error)
 	// Products
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	// internal/adapters/postgresql/sqlc/queries.sql
 	// Users
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
-	GetOrderByID(ctx context.Context, id int32) (Order, error)
+	GetOrderByID(ctx context.Context, orderNumber string) (Order, error)
 	GetProductByProductID(ctx context.Context, productID string) (Product, error)
 	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (GetUserByUsernameOrEmailRow, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
