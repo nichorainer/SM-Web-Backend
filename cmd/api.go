@@ -8,11 +8,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	// "github.com/jackc/pgx/v5"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/handlers"
-	appmiddleware "github.com/yourorg/backend-go/internal/middleware"
+	/* appmiddleware "github.com/yourorg/backend-go/internal/middleware" */
 )
 
 // Mount Server
@@ -68,12 +69,15 @@ func (app *application) mount() http.Handler {
 	// Users
 	r.Get("/users", server.ListUsers)
 	r.Get("/users/{user_id}", server.GetUserByID)
+	r.Put("/users/{id}", handlers.UpdateUser)
+	r.Put("/users/me", handlers.UpdateUser)
+
 	// Users (protected endpoints)
-	r.Group(func(r chi.Router) {
-		r.Use(appmiddleware.JWTMiddleware)
-		r.Post("/users/{id}", handlers.UpdateUser)
-		r.Post("/users/me", handlers.UpdateUser)
-	})
+	// r.Group(func(r chi.Router) {
+	// 	r.Use(appmiddleware.JWTMiddleware)
+	// 	r.Post("/users/{id}", handlers.UpdateUser)
+	// 	r.Post("/users/me", handlers.UpdateUser)
+	// })
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MethodNotAllowed: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
@@ -104,13 +108,16 @@ func (app *application) run(h http.Handler) error {
 }
 
 type application struct {
-	config config
+	config configStruct
 
 	// db driver
-	db *pgx.Conn
+	// db *pgx.Conn
+
+	// db driver using pool
+	db *pgxpool.Pool
 }
 
-type config struct {
+type configStruct struct {
 	addr string
 	db   dbConfig
 }

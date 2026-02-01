@@ -98,10 +98,12 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser handles updating user profile
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-    log.Println("UpdateUser handler triggered") // cek apakah handler jalan
+    log.Println("UpdateUser handler triggered") // checking if the handler has started
 
-    // Ambil id dari URL
+    // Take id from URL
     userIdStr := chi.URLParam(r, "id")
+    log.Printf("URL param id: %s", userIdStr)
+
     idInt, err := strconv.Atoi(userIdStr)
     if err != nil {
         log.Printf("Invalid user id: %v", err)
@@ -116,45 +118,67 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Invalid request body", http.StatusBadRequest)
         return
     }
+    log.Printf("Decoded input: %+v", input)
 
     // Extract claims dari JWT
-    claims, err := middleware.ExtractClaims(r)
-    if err != nil {
-        log.Printf("Unauthorized: %v", err)
-        http.Error(w, "Unauthorized", http.StatusUnauthorized)
+    // claims, err := middleware.ExtractClaims(r)
+    // if err != nil {
+    //     log.Printf("Unauthorized: %v", err)
+    //     http.Error(w, "Unauthorized", http.StatusUnauthorized)
+    //     return
+    // }
+
+    // Use /users/me
+    // if userIdStr == "me" {
+    //     idInt = int(claims["id"].(float64)) // JWT numeric claim dibaca float64
+    // }
+
+    // Hash password
+    // var hashedPassword string
+    // if input.Password != "" {
+    //     hp, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+    //     if err != nil {
+    //         log.Printf("Failed to hash password: %v", err)
+    //         http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+    //         return
+    //     }
+    //     hashedPassword = string(hp)
+    // }
+
+    // Plain password
+    var plainPassword string
+    if input.Password != "" {
+        plainPassword = input.Password
+    }
+    log.Printf("Plain password length: %d", len(plainPassword))
+
+    // Get DB
+    db := config.GetDB()
+    if db == nil {
+        log.Println("DB pool is nil, did you call InitDB() in main.go?")
+        http.Error(w, "Database not initialized", http.StatusInternalServerError)
         return
     }
 
-    // Kalau pakai /users/me
-    if userIdStr == "me" {
-        idInt = int(claims["id"].(float64)) // JWT numeric claim dibaca float64
-    }
-
-    // Hash password kalau ada
-    var hashedPassword string
-    if input.Password != "" {
-        hp, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
-        if err != nil {
-            log.Printf("Failed to hash password: %v", err)
-            http.Error(w, "Failed to hash password", http.StatusInternalServerError)
-            return
-        }
-        hashedPassword = string(hp)
-    }
-
-    db := config.GetDB()
-
     // Jalankan query update
+    log.Printf("Executing UPDATE for id=%d, full_name=%q, username=%q, email=%q, password=%q",
+        idInt, input.FullName, input.Username, input.Email, plainPassword)
+
     _, err = db.Exec(
         r.Context(),
         `UPDATE users
-         SET full_name = COALESCE(NULLIF($2, ''), full_name),
-             username   = COALESCE(NULLIF($3, ''), username),
-             email      = COALESCE(NULLIF($4, ''), email),
-             password_hash = COALESCE(NULLIF($5, ''), password_hash),
-             updated_at = NOW()
-         WHERE id = $1`,
-        idInt, input.FullName, input.Username, input.Email, hashedPassword,
+        SET full_name = COALESCE(NULLIF($2, ''), full_name),
+            username   = COALESCE(NULLIF($3, ''), username),
+            email      = COALESCE(NULLIF($4, ''), email),
+            password_hash = COALESCE(NULLIF($5, ''), password_hash),
+            updated_at = NOW()
+        WHERE id = $1`,
+        idInt,
+        input.FullName,
+        input.Username,
+        input.Email,
+        // hashedPassword,
+        plainPassword,
     )
     if err != nil {
         log.Printf("UpdateUser Exec error: %v", err)
@@ -163,6 +187,8 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     // Ambil kembali user yang sudah diupdate
+    log.Printf("Fetching updated user id=%d", idInt)
+
     row := db.QueryRow(
         r.Context(),
         `SELECT id, full_name, username, email
@@ -176,15 +202,18 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Failed to fetch updated user", http.StatusInternalServerError)
         return
     }
+    log.Printf("Updated user: %+v", updated)
 
     // Return JSON hanya 3 field
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(map[string]interface{}{
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
         "status": "success",
         "data": map[string]interface{}{
             "full_name": updated.FullName,
             "username":  updated.Username,
             "email":     updated.Email,
         },
-    })
+    }); err != nil {
+        log.Printf("UpdateUser Encode error: %v", err)
+    }
 }

@@ -154,37 +154,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 	return i, err
 }
 
-const getOrderByID = `-- name: GetOrderByID :one
-SELECT
-  id,
-  order_number,
-  customer_name,
-  total_amount,
-  status,
-  platform,
-  destination,
-  created_at
-FROM orders
-WHERE order_number = $1
-LIMIT 1
-`
-
-func (q *Queries) GetOrderByID(ctx context.Context, orderNumber string) (Order, error) {
-	row := q.db.QueryRow(ctx, getOrderByID, orderNumber)
-	var i Order
-	err := row.Scan(
-		&i.ID,
-		&i.OrderNumber,
-		&i.CustomerName,
-		&i.TotalAmount,
-		&i.Status,
-		&i.Platform,
-		&i.Destination,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getProductByProductID = `-- name: GetProductByProductID :one
 SELECT
   id,

@@ -12,7 +12,7 @@ var db *pgxpool.Pool
 
 // InitDB initializes the database connection pool
 func InitDB() {
-    dsn := os.Getenv("DATABASE_URL")
+    dsn := os.Getenv("GOOSE_DBSTRING")
     pool, err := pgxpool.New(context.Background(), dsn)
     if err != nil {
         log.Fatalf("Unable to connect to database: %v", err)

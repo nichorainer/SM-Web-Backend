@@ -16,7 +16,6 @@ type Querier interface {
 	// internal/adapters/postgresql/sqlc/queries.sql
 	// Users
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
-	GetOrderByID(ctx context.Context, orderNumber string) (Order, error)
 	GetProductByProductID(ctx context.Context, productID string) (Product, error)
 	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (GetUserByUsernameOrEmailRow, error)
 	ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error)
