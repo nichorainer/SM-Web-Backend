@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 )
 
-// CreateOrderParams merepresentasikan payload JSON dari FE
+// CreateOrderParams represents the JSON payload from the frontend
 type CreateOrderParams struct {
 	OrderNumber   string `json:"order_number"`
 	CustomerName  string `json:"customer_name"`
@@ -30,12 +31,19 @@ func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// parse CreatedAt string ke time.Time
-	createdAt, err := time.Parse(time.RFC3339, req.CreatedAt)
-	if err != nil {
-		http.Error(w, "invalid created_at format, must be RFC3339", http.StatusBadRequest)
-		return
+    // parse CreatedAt string dari FE ke time.Time
+    createdAt, err := time.Parse(time.RFC3339, req.CreatedAt)
+    if err != nil {
+        http.Error(w, "invalid created_at format, must be RFC3339", http.StatusBadRequest)
+        return
+    }
+
+	// normalize status
+	normalizedStatus := strings.ToLower(req.Status)
+	if normalizedStatus == "shipped" {
+		normalizedStatus = "shipping"
 	}
+
 
 	arg := repo.CreateOrderParams{
 		OrderNumber:  req.OrderNumber,
@@ -43,7 +51,7 @@ func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		Platform:     req.Platform,
 		Destination:  req.Destination,
 		TotalAmount:  pgtype.Int4{Int32: req.TotalAmount, Valid: true},
-		Status:       req.Status,
+		Status:       normalizedStatus,
 		CreatedAt:    pgtype.Timestamptz{Time: createdAt, Valid: true},
 	}
 
@@ -72,6 +80,15 @@ func (s *Server) ListOrders(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to list orders", http.StatusInternalServerError)
 		return
 	}
+
+	// normalize status values before sending to FE
+	for i := range orders {
+		orders[i].Status = strings.ToLower(orders[i].Status)
+		if orders[i].Status == "shipped" {
+			orders[i].Status = "shipping"
+		}
+	}
+
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(orders); err != nil {

@@ -99,20 +99,6 @@ FROM orders
 ORDER BY id DESC
 LIMIT $1 OFFSET $2;
 
--- name: GetOrderByID :one
-SELECT
-  id,
-  order_number,
-  customer_name,
-  total_amount,
-  status,
-  platform,
-  destination,
-  created_at
-FROM orders
-WHERE order_number = $1
-LIMIT 1;
-
 -- Utility queries
 
 -- name: NextProductSequence :one
