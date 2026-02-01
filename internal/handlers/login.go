@@ -99,7 +99,6 @@ func (s *Server) Login(w http.ResponseWriter, r *http.Request) {
 // UpdateUser handles updating user profile
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
     log.Println("UpdateUser handler triggered") // cek apakah handler jalan
-	
 
     // Ambil id dari URL
     userIdStr := chi.URLParam(r, "id")

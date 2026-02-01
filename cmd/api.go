@@ -53,10 +53,15 @@ func (app *application) mount() http.Handler {
 		r.Post("/login", server.Login)
 	})
 	
-	// Products
-	r.Get("/products", server.ListProducts)
-	r.Get("/products/{id}", server.GetProductByID)
-	r.Post("/product", server.CreateProduct)
+	// Products (mounted under /api)
+	r.Route("/api", func(r chi.Router) {
+		// List and create products at /api/products
+		r.Get("/products", server.ListProducts)
+		r.Post("/products", server.CreateProduct)
+
+		// Get single product by product_id at /api/products/{product_id}
+		r.Get("/products/{product_id}", server.GetProductByID)
+	})
 
 	// Orders
 	r.Get("/orders/{id}", server.GetOrderByID)
@@ -72,6 +77,10 @@ func (app *application) mount() http.Handler {
 		r.Put("/users/me", handlers.UpdateUser)
     })
 
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("MethodNotAllowed: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	})
 	// Log running routes
 	chi.Walk(r, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
 		log.Printf("[ROUTE] %s %s", method, route)
