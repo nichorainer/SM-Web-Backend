@@ -14,9 +14,9 @@ type Order struct {
 	CustomerName string             `json:"customer_name"`
 	TotalAmount  pgtype.Int4        `json:"total_amount"`
 	Status       string             `json:"status"`
-	CreatedBy    pgtype.Text        `json:"created_by"`
+	Platform     string             `json:"platform"`
+	Destination  string             `json:"destination"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Product struct {
@@ -27,9 +27,7 @@ type Product struct {
 	Category     string             `json:"category"`
 	PriceIdr     int64              `json:"price_idr"`
 	Stock        int32              `json:"stock"`
-	CreatedBy    pgtype.Text        `json:"created_by"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {

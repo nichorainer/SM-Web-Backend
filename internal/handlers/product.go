@@ -4,7 +4,6 @@ import (
   "encoding/json"
   "net/http"
   
-  "github.com/jackc/pgx/v5/pgtype"
   "github.com/go-chi/chi/v5"
   
   repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
@@ -12,13 +11,6 @@ import (
 
 type Server struct {
   Repo repo.Querier
-}
-
-// Register product routes (call this from your main router setup)
-func (s *Server) RegisterProductRoutes(r chi.Router) {
-	r.Get("/products", s.ListProducts)
-	r.Get("/products/{product_id}", s.GetProductByID)
-	r.Post("/products", s.CreateProduct)
 }
 
 // CreateProductRequest is the expected JSON body for creating a product
@@ -29,7 +21,6 @@ type CreateProductRequest struct {
     Category     string `json:"category"`
     PriceIdr     int64  `json:"price_idr"`
     Stock        int32  `json:"stock"`
-    CreatedBy    string `json:"created_by"`
 }
 
 // ListProducts returns a paginated list of products.
@@ -81,7 +72,6 @@ func (s *Server) CreateProduct(w http.ResponseWriter, r *http.Request) {
         Category:     req.Category,
         PriceIdr:     req.PriceIdr,
         Stock:        req.Stock,
-        CreatedBy:    pgtype.Text{String: req.CreatedBy, Valid: req.CreatedBy != ""},
     }
 
     p, err := s.Repo.CreateProduct(r.Context(), arg)

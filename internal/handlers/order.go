@@ -3,21 +3,24 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 )
 
+// CreateOrderParams merepresentasikan payload JSON dari FE
 type CreateOrderParams struct {
-	OrderNumber  string      `json:"order_number"`
-	CustomerName string      `json:"customer_name"`
-	TotalAmount  pgtype.Int4 `json:"total_amount"`
-	Status       string      `json:"status"`
-	CreatedBy    string      `json:"created_by"`
+	OrderNumber   string `json:"order_number"`
+	CustomerName  string `json:"customer_name"`
+	Platform      string `json:"platform"`
+	Destination   string `json:"destination"`
+	TotalAmount   int32  `json:"total_amount"`
+	Status        string `json:"status"`
+	CreatedAt     string `json:"created_at"`
 }
 
-// CreateOrder inserts a new order and its items
 func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var req CreateOrderParams
 	dec := json.NewDecoder(r.Body)
@@ -27,40 +30,51 @@ func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// parse CreatedAt string ke time.Time
+	createdAt, err := time.Parse(time.RFC3339, req.CreatedAt)
+	if err != nil {
+		http.Error(w, "invalid created_at format, must be RFC3339", http.StatusBadRequest)
+		return
+	}
+
 	arg := repo.CreateOrderParams{
 		OrderNumber:  req.OrderNumber,
 		CustomerName: req.CustomerName,
-		TotalAmount:  req.TotalAmount,
+		Platform:     req.Platform,
+		Destination:  req.Destination,
+		TotalAmount:  pgtype.Int4{Int32: req.TotalAmount, Valid: true},
 		Status:       req.Status,
-		CreatedBy:    pgtype.Text{String: req.CreatedBy, Valid: req.CreatedBy != ""},
+		CreatedAt:    pgtype.Timestamptz{Time: createdAt, Valid: true},
 	}
 
-	p, err := s.Repo.CreateOrder(r.Context(), arg)
-
+	order, err := s.Repo.CreateOrder(r.Context(), arg)
 	if err != nil {
-		http.Error(w, "failed to create product: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to create order: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(p); err != nil {
+	if err := json.NewEncoder(w).Encode(order); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
 }
 
-// ListProducts returns a paginated list of products.
+// ListOrders returns a paginated list of orders
 func (s *Server) ListOrders(w http.ResponseWriter, r *http.Request) {
 	params := repo.ListOrdersParams{
 		Limit:  100,
 		Offset: 0,
 	}
 
-	products, err := s.Repo.ListOrders(r.Context(), params)
+	orders, err := s.Repo.ListOrders(r.Context(), params)
 	if err != nil {
-		http.Error(w, "failed to list products", http.StatusInternalServerError)
+		http.Error(w, "failed to list orders", http.StatusInternalServerError)
 		return
 	}
 
-	json.NewEncoder(w).Encode(products)
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(orders); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }

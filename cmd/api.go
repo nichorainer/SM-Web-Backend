@@ -25,12 +25,14 @@ func (app *application) mount() http.Handler {
 
 	// --- CORS middleware ---
 	// Allow FE (React dev server) to call BE
+
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"}, // FE dev server
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 	}))
+
 	// --- End CORS ---
 
 	// Global Middleware
@@ -52,23 +54,14 @@ func (app *application) mount() http.Handler {
 		r.Post("/login", server.Login)
 	})
 
-	// Products (mounted under /api)
-	r.Route("/api", func(r chi.Router) {
-		// List and create products at /api/products
-		r.Get("/products", server.ListProducts)
-		r.Post("/products", server.CreateProduct)
-
-		// Get single product by product_id at /api/products/{product_id}
-		r.Get("/products/{product_id}", server.GetProductByID)
+	// // Products Routes
+	r.Route("/products", func(r chi.Router) {
+		r.Get("/", server.ListProducts)
+		r.Post("/", server.CreateProduct)
+		r.Get("/{id}", server.GetProductByID)
 	})
 
-	// Orders
-	// r.Route("/api", func(r chi.Router) {
-	// 	// List and create orders
-	// 	r.Get("/orders/{id}", server.GetOrderByID)
-	// 	r.Post("/orders", server.CreateOrder)
-	// })
-
+	// Orders Routes
 	r.Get("/orders", server.ListOrders)
 	r.Post("/orders", server.CreateOrder)
 

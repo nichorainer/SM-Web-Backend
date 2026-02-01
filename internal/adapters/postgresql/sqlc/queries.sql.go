@@ -13,17 +13,27 @@ import (
 
 const createOrder = `-- name: CreateOrder :one
 
-INSERT INTO orders (order_number, customer_name, total_amount, status, created_by)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, order_number, customer_name, total_amount, status, created_by, created_at, updated_at
+INSERT INTO orders (
+    order_number,
+    customer_name,
+    total_amount,
+    status,
+    platform,
+    destination,
+    created_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, order_number, customer_name, total_amount, status, platform, destination, created_at
 `
 
 type CreateOrderParams struct {
-	OrderNumber  string      `json:"order_number"`
-	CustomerName string      `json:"customer_name"`
-	TotalAmount  pgtype.Int4 `json:"total_amount"`
-	Status       string      `json:"status"`
-	CreatedBy    pgtype.Text `json:"created_by"`
+	OrderNumber  string             `json:"order_number"`
+	CustomerName string             `json:"customer_name"`
+	TotalAmount  pgtype.Int4        `json:"total_amount"`
+	Status       string             `json:"status"`
+	Platform     string             `json:"platform"`
+	Destination  string             `json:"destination"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 // Orders
@@ -33,7 +43,9 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		arg.CustomerName,
 		arg.TotalAmount,
 		arg.Status,
-		arg.CreatedBy,
+		arg.Platform,
+		arg.Destination,
+		arg.CreatedAt,
 	)
 	var i Order
 	err := row.Scan(
@@ -42,28 +54,27 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.CustomerName,
 		&i.TotalAmount,
 		&i.Status,
-		&i.CreatedBy,
+		&i.Platform,
+		&i.Destination,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const createProduct = `-- name: CreateProduct :one
 
-INSERT INTO products (product_id, product_name, supplier_name, category, price_idr, stock, created_by)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
+INSERT INTO products (product_id, product_name, supplier_name, category, price_idr, stock)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at
 `
 
 type CreateProductParams struct {
-	ProductID    string      `json:"product_id"`
-	ProductName  string      `json:"product_name"`
-	SupplierName string      `json:"supplier_name"`
-	Category     string      `json:"category"`
-	PriceIdr     int64       `json:"price_idr"`
-	Stock        int32       `json:"stock"`
-	CreatedBy    pgtype.Text `json:"created_by"`
+	ProductID    string `json:"product_id"`
+	ProductName  string `json:"product_name"`
+	SupplierName string `json:"supplier_name"`
+	Category     string `json:"category"`
+	PriceIdr     int64  `json:"price_idr"`
+	Stock        int32  `json:"stock"`
 }
 
 // Products
@@ -75,7 +86,6 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		arg.Category,
 		arg.PriceIdr,
 		arg.Stock,
-		arg.CreatedBy,
 	)
 	var i Product
 	err := row.Scan(
@@ -86,9 +96,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.Category,
 		&i.PriceIdr,
 		&i.Stock,
-		&i.CreatedBy,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -147,7 +155,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, order_number, customer_name, total_amount, status, created_by, created_at, updated_at
+SELECT
+  id,
+  order_number,
+  customer_name,
+  total_amount,
+  status,
+  platform,
+  destination,
+  created_at
 FROM orders
 WHERE order_number = $1
 LIMIT 1
@@ -162,15 +178,23 @@ func (q *Queries) GetOrderByID(ctx context.Context, orderNumber string) (Order, 
 		&i.CustomerName,
 		&i.TotalAmount,
 		&i.Status,
-		&i.CreatedBy,
+		&i.Platform,
+		&i.Destination,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getProductByProductID = `-- name: GetProductByProductID :one
-SELECT id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
+SELECT
+  id,
+  product_id,
+  product_name,
+  supplier_name,
+  category,
+  price_idr,
+  stock,
+  created_at
 FROM products
 WHERE product_id = $1
 LIMIT 1
@@ -187,9 +211,7 @@ func (q *Queries) GetProductByProductID(ctx context.Context, productID string) (
 		&i.Category,
 		&i.PriceIdr,
 		&i.Stock,
-		&i.CreatedBy,
 		&i.CreatedAt,
-		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -236,15 +258,15 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUse
 }
 
 const listOrders = `-- name: ListOrders :many
-SELECT 
-  id, 
-  order_number, 
-  customer_name, 
-  total_amount, 
-  status, 
-  created_by, 
-  created_at, 
-  updated_at
+SELECT
+  id,
+  order_number,
+  customer_name,
+  total_amount,
+  status,
+  platform,
+  destination,
+  created_at
 FROM orders
 ORDER BY id DESC
 LIMIT $1 OFFSET $2
@@ -270,9 +292,9 @@ func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order
 			&i.CustomerName,
 			&i.TotalAmount,
 			&i.Status,
-			&i.CreatedBy,
+			&i.Platform,
+			&i.Destination,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -285,7 +307,15 @@ func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order
 }
 
 const listProducts = `-- name: ListProducts :many
-SELECT id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
+SELECT
+  id,
+  product_id,
+  product_name,
+  supplier_name,
+  category,
+  price_idr,
+  stock,
+  created_at
 FROM products
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -313,9 +343,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 			&i.Category,
 			&i.PriceIdr,
 			&i.Stock,
-			&i.CreatedBy,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -387,52 +415,6 @@ func (q *Queries) NextProductSequence(ctx context.Context) (int64, error) {
 	var seq int64
 	err := row.Scan(&seq)
 	return seq, err
-}
-
-const updateProduct = `-- name: UpdateProduct :one
-UPDATE products
-SET product_name = COALESCE(NULLIF($2, ''), product_name),
-    supplier_name = COALESCE(NULLIF($3, ''), supplier_name),
-    category = COALESCE(NULLIF($4, ''), category),
-    price_idr = COALESCE($5, price_idr),
-    stock = COALESCE($6, stock),
-    updated_at = now()
-WHERE product_id = $1
-RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_by, created_at, updated_at
-`
-
-type UpdateProductParams struct {
-	ProductID string      `json:"product_id"`
-	Column2   interface{} `json:"column_2"`
-	Column3   interface{} `json:"column_3"`
-	Column4   interface{} `json:"column_4"`
-	PriceIdr  int64       `json:"price_idr"`
-	Stock     int32       `json:"stock"`
-}
-
-func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
-	row := q.db.QueryRow(ctx, updateProduct,
-		arg.ProductID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.PriceIdr,
-		arg.Stock,
-	)
-	var i Product
-	err := row.Scan(
-		&i.ID,
-		&i.ProductID,
-		&i.ProductName,
-		&i.SupplierName,
-		&i.Category,
-		&i.PriceIdr,
-		&i.Stock,
-		&i.CreatedBy,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const updateUser = `-- name: UpdateUser :one

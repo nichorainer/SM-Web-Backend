@@ -25,7 +25,6 @@ type Querier interface {
 	// Utility queries
 	// This is a helper to get a next sequence number for product id generation if you prefer DB-side sequence.
 	NextProductSequence(ctx context.Context) (int64, error)
-	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
 	UserByID(ctx context.Context, id int32) (UserByIDRow, error)
 }
