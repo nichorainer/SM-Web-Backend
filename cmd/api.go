@@ -13,7 +13,6 @@ import (
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/handlers"
-	/* appmiddleware "github.com/yourorg/backend-go/internal/middleware" */
 )
 
 // Mount Server
@@ -49,13 +48,17 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("all good"))
 	})
 
-	// Auth Routes (Public)
-	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", server.CreateUser)
-		r.Post("/login", server.Login)
-	})
+	// Register and Login
+	r.Post("/register", server.CreateUser)
+	r.Post("/login", server.LoginUser)
 
-	// // Products Routes
+	// Users
+	r.Get("/users", server.ListUsers)
+	r.Get("/users/{user_id}", server.GetUserByID)
+	r.Put("/users/{id}", handlers.UpdateUser)
+	r.Put("/users/me", handlers.UpdateUser)
+
+	// Products Routes
 	r.Route("/products", func(r chi.Router) {
 		r.Get("/", server.ListProducts)
 		r.Post("/", server.CreateProduct)
@@ -65,19 +68,6 @@ func (app *application) mount() http.Handler {
 	// Orders Routes
 	r.Get("/orders", server.ListOrders)
 	r.Post("/orders", server.CreateOrder)
-
-	// Users
-	r.Get("/users", server.ListUsers)
-	r.Get("/users/{user_id}", server.GetUserByID)
-	r.Put("/users/{id}", handlers.UpdateUser)
-	r.Put("/users/me", handlers.UpdateUser)
-
-	// Users (protected endpoints)
-	// r.Group(func(r chi.Router) {
-	// 	r.Use(appmiddleware.JWTMiddleware)
-	// 	r.Post("/users/{id}", handlers.UpdateUser)
-	// 	r.Post("/users/me", handlers.UpdateUser)
-	// })
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MethodNotAllowed: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
