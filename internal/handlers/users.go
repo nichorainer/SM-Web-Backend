@@ -9,7 +9,7 @@ import (
 	"strings"
     "errors"
     "database/sql"
-
+    
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
@@ -73,6 +73,49 @@ func (s *Server) GetUserByID(w http.ResponseWriter, r *http.Request) {
     }
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(APIResponse{Status: "success", Data: user})
+}
+
+// GetProfile handler for GET /users/me
+func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
+    idStr := r.URL.Query().Get("id")
+    if idStr == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "id is required"})
+        return
+    }
+
+    id64, err := strconv.ParseInt(idStr, 10, 32)
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid id"})
+        return
+    }
+    userID := int32(id64)
+
+    user, err := s.Repo.UserByID(r.Context(), userID)
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            w.WriteHeader(http.StatusNotFound)
+            json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "user not found"})
+            return
+        }
+        log.Println("failed to get profile:", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to get profile"})
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(APIResponse{
+        Status: "success",
+        Data: map[string]interface{}{
+            "id":        user.ID,
+            "full_name": user.FullName,
+            "username":  user.Username,
+            "email":     user.Email,
+            "role":      user.Role,
+        },
+    })
 }
 
 // CreateUser creates a new user (Register)

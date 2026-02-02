@@ -54,6 +54,7 @@ func (app *application) mount() http.Handler {
 	// Users
 	r.Get("/users", server.ListUsers)
 	r.Get("/users/{id}", server.GetUserByID)
+	r.Get("/users/me", server.GetProfile)
 	r.Put("/users/{id}", handlers.UpdateUser)
 	r.Put("/users/me", handlers.UpdateUser)
 
