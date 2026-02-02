@@ -2,7 +2,6 @@ package env
 
 import (
 	"os"
-	// "github.com/joho/godotenv"
 )
 
 // Config holds environment configuration used across the app.
@@ -26,10 +25,6 @@ func Load() Config {
 		JWTSecret:  getEnv("JWT_SECRET", "change_this_secret"),
 	}
 }
-
-// func Load() error {
-//     return godotenv.Load()
-// }
 
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {

@@ -7,6 +7,8 @@ import (
 	"net/mail"
 	"strconv"
 	"strings"
+    "errors"
+    "database/sql"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -29,6 +31,13 @@ type CreateUserRequest struct {
     Username string `json:"username"`
     Email    string `json:"email"`
     Password string `json:"password"`
+}
+
+// UserResponse is the response struct for user data.
+type UserResponse struct {
+    ID       int32  `json:"id"`
+    Username string `json:"username"`
+    Email    string `json:"email"`
 }
 
 // ListUsers returns all users.
@@ -94,8 +103,23 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     existing, err := s.Repo.GetUserByUsernameOrEmail(r.Context(),
-        repo.GetUserByUsernameOrEmailParams{Username: req.Username, Email: req.Email})
+        repo.GetUserByUsernameOrEmailParams{
+            Username: req.Username, 
+            Email: req.Email,
+        })
     if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+        // Tidak ada user → aman lanjut create
+    } else {
+        log.Println("error checking existing user:", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(APIResponse{
+            Status:  "error",
+            Message: "failed to check existing user",
+        })
+        return
+    }
+    } else {
         log.Println("error checking existing user:", err)
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusInternalServerError)
@@ -140,21 +164,32 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
 }
 
 // LoginUser verifies email (or username) and password
+type LoginRequest struct {
+    UsernameOrEmail string `json:"username_or_email"`
+    Password        string `json:"password"`
+}
+
 func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
     var req LoginRequest
     dec := json.NewDecoder(r.Body)
     dec.DisallowUnknownFields()
     if err := dec.Decode(&req); err != nil {
         w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid request body"})
+        log.Printf("Login decode error: %v", err)
+        json.NewEncoder(w).Encode(APIResponse{
+            Status:  "error",
+            Message: "invalid request body: " + err.Error(),
+        })
         return
     }
 
-    req.Email = strings.TrimSpace(req.Email)
-    req.Password = strings.TrimSpace(req.Password)
+    // pilih email atau username
+    params := repo.GetUserByUsernameOrEmailParams{
+        Username: strings.TrimSpace(req.UsernameOrEmail),
+        Email:    strings.TrimSpace(req.UsernameOrEmail),
+    }
 
-    user, err := s.Repo.GetUserByUsernameOrEmail(r.Context(),
-        repo.GetUserByUsernameOrEmailParams{Username: "", Email: req.Email})
+    user, err := s.Repo.GetUserByUsernameOrEmail(r.Context(), params)
     if err != nil || user.ID == 0 {
         w.WriteHeader(http.StatusUnauthorized)
         json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid email or password"})
@@ -168,23 +203,28 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
     }
 
     w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(APIResponse{Status: "success", Data: user})
+    json.NewEncoder(w).Encode(APIResponse{
+        Status: "success",
+        Data: UserResponse{
+            ID:       user.ID,
+            Username: user.Username,
+            Email:    user.Email,
+        },
+    })
 }
 
 // UpdateUser handler
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
     log.Println("UpdateUser handler triggered") // checking if the handler has started
 
-    // Take id from URL
-    userIdStr := chi.URLParam(r, "id")
-    log.Printf("URL param id: %s", userIdStr)
-
-    idInt, err := strconv.Atoi(userIdStr)
-    if err != nil {
-        log.Printf("Invalid user id: %v", err)
-        http.Error(w, "Invalid user id", http.StatusBadRequest)
+    // Get user_id (UUID) from URL
+    userUUID := chi.URLParam(r, "user_id")
+    if userUUID == "" {
+        log.Println("Missing user_id in URL")
+        http.Error(w, "Missing user_id", http.StatusBadRequest)
         return
     }
+    log.Printf("URL param user_id: %s", userUUID)
 
     // Decode body
     var input models.User
@@ -210,20 +250,17 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Jalankan query update
-    log.Printf("Executing UPDATE for id=%d, full_name=%q, username=%q, email=%q, password=%q",
-        idInt, input.FullName, input.Username, input.Email, plainPassword)
-
-    _, err = db.Exec(
+    // Jalankan query update berdasarkan user_id
+    _, err := db.Exec(
         r.Context(),
         `UPDATE users
-        SET full_name = COALESCE(NULLIF($2, ''), full_name),
-            username   = COALESCE(NULLIF($3, ''), username),
-            email      = COALESCE(NULLIF($4, ''), email),
-            password_hash = COALESCE(NULLIF($5, ''), password_hash),
-            updated_at = NOW()
-        WHERE id = $1`,
-        idInt,
+         SET full_name = COALESCE(NULLIF($2, ''), full_name),
+             username   = COALESCE(NULLIF($3, ''), username),
+             email      = COALESCE(NULLIF($4, ''), email),
+             password_hash = COALESCE(NULLIF($5, ''), password_hash),
+             updated_at = NOW()
+         WHERE user_id = $1`,
+        userUUID,
         input.FullName,
         input.Username,
         input.Email,
@@ -236,13 +273,13 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     // Ambil kembali user yang sudah diupdate
-    log.Printf("Fetching updated user id=%d", idInt)
+    log.Printf("Fetching updated user id=%s", userUUID)
 
     row := db.QueryRow(
         r.Context(),
-        `SELECT id, full_name, username, email
-         FROM users WHERE id=$1`,
-        idInt,
+        `SELECT user_id, full_name, username, email
+         FROM users WHERE user_id=$1`,
+        userUUID,
     )
 
     var updated models.User
@@ -274,9 +311,4 @@ func HashPassword(pw string) (string, error) {
         return "", err
     }
     return string(b), nil
-}
-
-type LoginRequest struct {
-    Email    string `json:"email"`
-    Password string `json:"password"`
 }
