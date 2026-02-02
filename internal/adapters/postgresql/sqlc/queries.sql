@@ -33,7 +33,7 @@ SET username = COALESCE(NULLIF($2, ''), username),
     password_hash = COALESCE(NULLIF($5, ''), password_hash),
     updated_at = now()
 WHERE id = $1
-RETURNING id, full_name, username, email;
+RETURNING id, full_name, username, email, password_hash;
 
 -- Products
 

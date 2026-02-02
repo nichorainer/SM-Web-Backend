@@ -259,7 +259,6 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
     })
 }
 
-
 // UpdateUser handler
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
     log.Println("UpdateUser handler triggered") // checking if the handler has started
@@ -282,10 +281,17 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     }
     log.Printf("Decoded input: %+v", input)
 
-    // Plain password
-    var plainPassword string
+    // Again, hashed password
+    var hashedPassword string
     if input.Password != "" {
-        plainPassword = input.Password
+        // hash password dengan bcrypt
+        hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
+        if err != nil {
+            log.Println("failed to hash password:", err)
+            http.Error(w, "Failed to process password", http.StatusInternalServerError)
+            return
+        }
+        hashedPassword = string(hash)
     }
 
     db := config.GetDB()
@@ -296,25 +302,50 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     // Jalankan query update berdasarkan id
-    _, err := db.Exec(
-        r.Context(),
-        `UPDATE users
-         SET full_name     = COALESCE(NULLIF($2, ''), full_name),
-             username      = COALESCE(NULLIF($3, ''), username),
-             email         = COALESCE(NULLIF($4, ''), email),
-             password_hash = COALESCE(NULLIF($5, ''), password_hash),
-             updated_at    = NOW()
-         WHERE id = $1`,
-        idStr,
-        input.FullName,
-        input.Username,
-        input.Email,
-        plainPassword,
-    )
-    if err != nil {
-        log.Printf("UpdateUser Exec error: %v", err)
-        http.Error(w, "Failed to update user", http.StatusInternalServerError)
-        return
+    if hashedPassword != "" {
+        _, err := db.Exec(
+            r.Context(),
+            `UPDATE users
+            SET full_name  = COALESCE(NULLIF($2, ''), full_name),
+                username   = COALESCE(NULLIF($3, ''), username),
+                email      = COALESCE(NULLIF($4, ''), email),
+                password_hash = $5,
+                updated_at = NOW()
+            WHERE id = $1`,
+            idStr,
+            input.FullName,
+            input.Username,
+            input.Email,
+            hashedPassword,
+        )
+        if err != nil {
+            log.Printf("UpdateUser Exec error: %v", err)
+            http.Error(w, "Failed to update user", http.StatusInternalServerError)
+            return
+        }
+
+    } else {
+        _, err := db.Exec(
+            r.Context(),
+            `UPDATE users
+            SET full_name     = COALESCE(NULLIF($2, ''), full_name),
+                username      = COALESCE(NULLIF($3, ''), username),
+                email         = COALESCE(NULLIF($4, ''), email),
+                password_hash = COALESCE(NULLIF($5, ''), password_hash),
+                updated_at    = NOW()
+            WHERE id = $1`,
+            idStr,
+            input.FullName,
+            input.Username,
+            input.Email,
+            hashedPassword,
+        )
+        
+        if err != nil {
+            log.Printf("UpdateUser Exec error: %v", err)
+            http.Error(w, "Failed to update user", http.StatusInternalServerError)
+            return
+        }
     }
 
     // Ambil kembali user yang sudah diupdate
@@ -342,6 +373,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
             "full_name": updated.FullName,
             "username":  updated.Username,
             "email":     updated.Email,
+            "role":      updated.Role,
         },
     }); err != nil {
         log.Printf("UpdateUser Encode error: %v", err)
