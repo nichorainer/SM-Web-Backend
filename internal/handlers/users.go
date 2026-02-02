@@ -92,7 +92,7 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
     }
     userID := int32(id64)
 
-    user, err := s.Repo.UserByID(r.Context(), userID)
+    u, err := s.Repo.UserByID(r.Context(), userID)
     if err != nil {
         if errors.Is(err, sql.ErrNoRows) {
             w.WriteHeader(http.StatusNotFound)
@@ -105,16 +105,19 @@ func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    resp := models.User{
+        ID:       int(u.ID),
+        UserID:   u.UserID,
+        FullName: u.FullName,
+        Username: u.Username,
+        Email:    u.Email,
+        Role:     u.Role,
+    }
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(APIResponse{
         Status: "success",
-        Data: map[string]interface{}{
-            "id":        user.ID,
-            "full_name": user.FullName,
-            "username":  user.Username,
-            "email":     user.Email,
-            "role":      user.Role,
-        },
+        Data:   resp,
     })
 }
 
