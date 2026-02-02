@@ -9,7 +9,6 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
-	// "github.com/jackc/pgx/v5"
 
 	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
 	"github.com/yourorg/backend-go/internal/handlers"
@@ -36,11 +35,11 @@ func (app *application) mount() http.Handler {
 	// --- End CORS ---
 
 	// Global Middleware
-	r.Use(chimiddleware.RequestID) // important for rate limiting
-	r.Use(chimiddleware.RealIP)    // import for rate limiting, analytics and tracing
+	r.Use(chimiddleware.RequestID) 			// important for rate limiting
+	r.Use(chimiddleware.RealIP)    			// import for rate limiting, analytics and tracing
 	r.Use(chimiddleware.Logger)
-	r.Use(chimiddleware.Recoverer)       // recover from crashes
-	r.Use(chimiddleware.RedirectSlashes) // redirect slashes to no slash URL
+	r.Use(chimiddleware.Recoverer)       	// recover from crashes
+	r.Use(chimiddleware.RedirectSlashes) 	// redirect slashes to no slash URL
 	r.Use(chimiddleware.Timeout(60 * time.Second))
 
 	// Health Check
@@ -54,7 +53,7 @@ func (app *application) mount() http.Handler {
 
 	// Users
 	r.Get("/users", server.ListUsers)
-	r.Get("/users/{user_id}", server.GetUserByID)
+	r.Get("/users/{id}", server.GetUserByID)
 	r.Put("/users/{id}", handlers.UpdateUser)
 	r.Put("/users/me", handlers.UpdateUser)
 
@@ -99,10 +98,6 @@ func (app *application) run(h http.Handler) error {
 
 type application struct {
 	config configStruct
-
-	// db driver
-	// db *pgx.Conn
-
 	// db driver using pool
 	db *pgxpool.Pool
 }

@@ -56,11 +56,11 @@ func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByID returns a user by ID.
 func (s *Server) GetUserByID(w http.ResponseWriter, r *http.Request) {
-    userIDStr := chi.URLParam(r, "user_id")
+    userIDStr := chi.URLParam(r, "id")
     id64, err := strconv.ParseInt(userIDStr, 10, 32)
     if err != nil {
         w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid user_id"})
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid id"})
         return
     }
     userID := int32(id64)
