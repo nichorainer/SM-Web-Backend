@@ -393,12 +393,12 @@ SET username = COALESCE(NULLIF($2, ''), username),
     full_name = COALESCE(NULLIF($4, ''), full_name),
     password_hash = COALESCE(NULLIF($5, ''), password_hash),
     updated_at = now()
-WHERE user_id = $1
-RETURNING user_id, full_name, username, email
+WHERE id = $1
+RETURNING id, full_name, username, email
 `
 
 type UpdateUserParams struct {
-	UserID  string      `json:"user_id"`
+	ID      int32       `json:"id"`
 	Column2 interface{} `json:"column_2"`
 	Column3 interface{} `json:"column_3"`
 	Column4 interface{} `json:"column_4"`
@@ -406,7 +406,7 @@ type UpdateUserParams struct {
 }
 
 type UpdateUserRow struct {
-	UserID   string `json:"user_id"`
+	ID       int32  `json:"id"`
 	FullName string `json:"full_name"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
@@ -414,7 +414,7 @@ type UpdateUserRow struct {
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
 	row := q.db.QueryRow(ctx, updateUser,
-		arg.UserID,
+		arg.ID,
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,
@@ -422,7 +422,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 	)
 	var i UpdateUserRow
 	err := row.Scan(
-		&i.UserID,
+		&i.ID,
 		&i.FullName,
 		&i.Username,
 		&i.Email,

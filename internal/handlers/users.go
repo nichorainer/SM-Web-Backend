@@ -40,87 +40,6 @@ type UserResponse struct {
     Email    string `json:"email"`
 }
 
-// ListUsers returns all users.
-func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
-    params := repo.ListUsersParams{Limit: 100, Offset: 0}
-    users, err := s.Repo.ListUsers(r.Context(), params)
-    if err != nil {
-        log.Println("failed to list users:", err)
-        w.WriteHeader(http.StatusInternalServerError)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to list users"})
-        return
-    }
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(APIResponse{Status: "success", Data: users})
-}
-
-// GetUserByID returns a user by ID.
-func (s *Server) GetUserByID(w http.ResponseWriter, r *http.Request) {
-    userIDStr := chi.URLParam(r, "id")
-    id64, err := strconv.ParseInt(userIDStr, 10, 32)
-    if err != nil {
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid id"})
-        return
-    }
-    userID := int32(id64)
-    user, err := s.Repo.UserByID(r.Context(), userID)
-    if err != nil {
-        log.Println("user not found:", err)
-        w.WriteHeader(http.StatusNotFound)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "user not found"})
-        return
-    }
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(APIResponse{Status: "success", Data: user})
-}
-
-// GetProfile handler for GET /users/me
-func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
-    idStr := r.URL.Query().Get("id")
-    if idStr == "" {
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "id is required"})
-        return
-    }
-
-    id64, err := strconv.ParseInt(idStr, 10, 32)
-    if err != nil {
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid id"})
-        return
-    }
-    userID := int32(id64)
-
-    u, err := s.Repo.UserByID(r.Context(), userID)
-    if err != nil {
-        if errors.Is(err, sql.ErrNoRows) {
-            w.WriteHeader(http.StatusNotFound)
-            json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "user not found"})
-            return
-        }
-        log.Println("failed to get profile:", err)
-        w.WriteHeader(http.StatusInternalServerError)
-        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to get profile"})
-        return
-    }
-
-    resp := models.User{
-        ID:       int(u.ID),
-        UserID:   u.UserID,
-        FullName: u.FullName,
-        Username: u.Username,
-        Email:    u.Email,
-        Role:     u.Role,
-    }
-
-    w.Header().Set("Content-Type", "application/json")
-    json.NewEncoder(w).Encode(APIResponse{
-        Status: "success",
-        Data:   resp,
-    })
-}
-
 // CreateUser creates a new user (Register)
 func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
     var req CreateUserRequest
@@ -259,20 +178,102 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
     })
 }
 
+// ListUsers returns all users.
+func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
+    params := repo.ListUsersParams{Limit: 100, Offset: 0}
+    users, err := s.Repo.ListUsers(r.Context(), params)
+    if err != nil {
+        log.Println("failed to list users:", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to list users"})
+        return
+    }
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(APIResponse{Status: "success", Data: users})
+}
+
+// GetUserByID returns a user by ID.
+func (s *Server) GetUserByID(w http.ResponseWriter, r *http.Request) {
+    userIDStr := chi.URLParam(r, "id")
+    id64, err := strconv.ParseInt(userIDStr, 10, 32)
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid id"})
+        return
+    }
+    userID := int32(id64)
+    user, err := s.Repo.UserByID(r.Context(), userID)
+    if err != nil {
+        log.Println("user not found:", err)
+        w.WriteHeader(http.StatusNotFound)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "user not found"})
+        return
+    }
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(APIResponse{Status: "success", Data: user})
+}
+
+// GetProfile handler for GET /users/me
+func (s *Server) GetProfile(w http.ResponseWriter, r *http.Request) {
+    idStr := r.URL.Query().Get("id")
+    if idStr == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "id is required"})
+        return
+    }
+
+    id64, err := strconv.ParseInt(idStr, 10, 32)
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid id"})
+        return
+    }
+    userID := int32(id64)
+
+    u, err := s.Repo.UserByID(r.Context(), userID)
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            w.WriteHeader(http.StatusNotFound)
+            json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "user not found"})
+            return
+        }
+        log.Println("failed to get profile:", err)
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to get profile"})
+        return
+    }
+
+    resp := models.User{
+        ID:       int(u.ID),
+        UserID:   u.UserID,
+        FullName: u.FullName,
+        Username: u.Username,
+        Email:    u.Email,
+        Role:     u.Role,
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(APIResponse{
+        Status: "success",
+        Data:   resp,
+    })
+}
+
+
 // UpdateUser handler
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
     log.Println("UpdateUser handler triggered") // checking if the handler has started
 
-    // Get user_id (UUID) from URL
-    userUUID := chi.URLParam(r, "user_id")
-    if userUUID == "" {
-        log.Println("Missing user_id in URL")
-        http.Error(w, "Missing user_id", http.StatusBadRequest)
+    // Get user id (not user_id, id from table) from URL
+    idStr := chi.URLParam(r, "id")
+    if idStr == "" {
+        log.Println("Missing id in URL")
+        http.Error(w, "Missing id", http.StatusBadRequest)
         return
     }
-    log.Printf("URL param user_id: %s", userUUID)
+    log.Printf("URL param id: %s", idStr)
 
-    // Decode body
+    // Decode body JSON
     var input models.User
     if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
         log.Printf("Invalid request body: %v", err)
@@ -286,9 +287,7 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     if input.Password != "" {
         plainPassword = input.Password
     }
-    log.Printf("Plain password length: %d", len(plainPassword))
 
-    // Get DB
     db := config.GetDB()
     if db == nil {
         log.Println("DB pool is nil, did you call InitDB() in main.go?")
@@ -296,17 +295,17 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    // Jalankan query update berdasarkan user_id
+    // Jalankan query update berdasarkan id
     _, err := db.Exec(
         r.Context(),
         `UPDATE users
-         SET full_name = COALESCE(NULLIF($2, ''), full_name),
-             username   = COALESCE(NULLIF($3, ''), username),
-             email      = COALESCE(NULLIF($4, ''), email),
+         SET full_name     = COALESCE(NULLIF($2, ''), full_name),
+             username      = COALESCE(NULLIF($3, ''), username),
+             email         = COALESCE(NULLIF($4, ''), email),
              password_hash = COALESCE(NULLIF($5, ''), password_hash),
-             updated_at = NOW()
-         WHERE user_id = $1`,
-        userUUID,
+             updated_at    = NOW()
+         WHERE id = $1`,
+        idStr,
         input.FullName,
         input.Username,
         input.Email,
@@ -319,28 +318,27 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     // Ambil kembali user yang sudah diupdate
-    log.Printf("Fetching updated user id=%s", userUUID)
-
     row := db.QueryRow(
         r.Context(),
-        `SELECT user_id, full_name, username, email
-         FROM users WHERE user_id=$1`,
-        userUUID,
+        `SELECT id, full_name, username, email, role
+         FROM users WHERE id=$1`,
+        idStr,
     )
 
     var updated models.User
-    if err := row.Scan(&updated.ID, &updated.FullName, &updated.Username, &updated.Email); err != nil {
+    if err := row.Scan(&updated.ID, &updated.FullName, &updated.Username, &updated.Email, &updated.Role); err != nil {
         log.Printf("UpdateUser Scan error: %v", err)
         http.Error(w, "Failed to fetch updated user", http.StatusInternalServerError)
         return
     }
     log.Printf("Updated user: %+v", updated)
 
-    // Return JSON hanya 3 field
+    // Return JSON lengkap
     w.Header().Set("Content-Type", "application/json")
     if err := json.NewEncoder(w).Encode(map[string]interface{}{
         "status": "success",
         "data": map[string]interface{}{
+            "id":        updated.ID,
             "full_name": updated.FullName,
             "username":  updated.Username,
             "email":     updated.Email,
