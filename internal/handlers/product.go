@@ -23,7 +23,7 @@ type CreateProductRequest struct {
     Stock        int32  `json:"stock"`
 }
 
-// ListProducts returns a paginated list of products.
+// ListProducts returns either full products or simplified options
 func (s *Server) ListProducts(w http.ResponseWriter, r *http.Request) {
 	params := repo.ListProductsParams{
 		Limit:  100,
@@ -36,7 +36,35 @@ func (s *Server) ListProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(products)
+	// cek query param ?mode=options
+	mode := r.URL.Query().Get("mode")
+	if mode == "options" {
+		// FE hanya butuh product_id + product_name
+		type ProductOption struct {
+			ProductID   string `json:"product_id"`
+			ProductName string `json:"product_name"`
+		}
+
+		options := make([]ProductOption, len(products))
+		for i, p := range products {
+			options[i] = ProductOption{
+				ProductID:   p.ProductID,
+				ProductName: p.ProductName,
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(options); err != nil {
+			http.Error(w, "failed to encode response", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// default: kirim full products untuk productspage
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(products); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
 }
 
 // GetProductByID returns a product by product_id (string).

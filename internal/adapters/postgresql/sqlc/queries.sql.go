@@ -15,47 +15,68 @@ const createOrder = `-- name: CreateOrder :one
 
 INSERT INTO orders (
     order_number,
+    product_id,
     customer_name,
     total_amount,
     status,
     platform,
     destination,
+    price_idr,
     created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, order_number, customer_name, total_amount, status, platform, destination, created_at
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, order_number, product_id, customer_name, total_amount, status, platform, destination, price_idr, created_at
 `
 
 type CreateOrderParams struct {
 	OrderNumber  string             `json:"order_number"`
+	ProductID    pgtype.Int4        `json:"product_id"`
 	CustomerName string             `json:"customer_name"`
 	TotalAmount  pgtype.Int4        `json:"total_amount"`
 	Status       string             `json:"status"`
 	Platform     string             `json:"platform"`
 	Destination  string             `json:"destination"`
+	PriceIdr     pgtype.Int4        `json:"price_idr"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type CreateOrderRow struct {
+	ID           int32              `json:"id"`
+	OrderNumber  string             `json:"order_number"`
+	ProductID    pgtype.Int4        `json:"product_id"`
+	CustomerName string             `json:"customer_name"`
+	TotalAmount  pgtype.Int4        `json:"total_amount"`
+	Status       string             `json:"status"`
+	Platform     string             `json:"platform"`
+	Destination  string             `json:"destination"`
+	PriceIdr     pgtype.Int4        `json:"price_idr"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 // Orders
-func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error) {
+func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (CreateOrderRow, error) {
 	row := q.db.QueryRow(ctx, createOrder,
 		arg.OrderNumber,
+		arg.ProductID,
 		arg.CustomerName,
 		arg.TotalAmount,
 		arg.Status,
 		arg.Platform,
 		arg.Destination,
+		arg.PriceIdr,
 		arg.CreatedAt,
 	)
-	var i Order
+	var i CreateOrderRow
 	err := row.Scan(
 		&i.ID,
 		&i.OrderNumber,
+		&i.ProductID,
 		&i.CustomerName,
 		&i.TotalAmount,
 		&i.Status,
 		&i.Platform,
 		&i.Destination,
+		&i.PriceIdr,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -228,13 +249,14 @@ func (q *Queries) GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUse
 
 const listOrders = `-- name: ListOrders :many
 SELECT
-  id,
   order_number,
+  product_id,
   customer_name,
   total_amount,
   status,
   platform,
   destination,
+  price_idr,
   created_at
 FROM orders
 ORDER BY id DESC
@@ -246,23 +268,36 @@ type ListOrdersParams struct {
 	Offset int32 `json:"offset"`
 }
 
-func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]Order, error) {
+type ListOrdersRow struct {
+	OrderNumber  string             `json:"order_number"`
+	ProductID    pgtype.Int4        `json:"product_id"`
+	CustomerName string             `json:"customer_name"`
+	TotalAmount  pgtype.Int4        `json:"total_amount"`
+	Status       string             `json:"status"`
+	Platform     string             `json:"platform"`
+	Destination  string             `json:"destination"`
+	PriceIdr     pgtype.Int4        `json:"price_idr"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListOrders(ctx context.Context, arg ListOrdersParams) ([]ListOrdersRow, error) {
 	rows, err := q.db.Query(ctx, listOrders, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Order
+	var items []ListOrdersRow
 	for rows.Next() {
-		var i Order
+		var i ListOrdersRow
 		if err := rows.Scan(
-			&i.ID,
 			&i.OrderNumber,
+			&i.ProductID,
 			&i.CustomerName,
 			&i.TotalAmount,
 			&i.Status,
 			&i.Platform,
 			&i.Destination,
+			&i.PriceIdr,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -386,6 +421,49 @@ func (q *Queries) NextProductSequence(ctx context.Context) (int64, error) {
 	return seq, err
 }
 
+const updateOrderStatus = `-- name: UpdateOrderStatus :one
+UPDATE orders
+SET status = $2, updated_at = now()
+WHERE id = $1
+RETURNING id, order_number, product_id, customer_name, total_amount, status, platform, destination, price_idr, created_at
+`
+
+type UpdateOrderStatusParams struct {
+	ID     int32  `json:"id"`
+	Status string `json:"status"`
+}
+
+type UpdateOrderStatusRow struct {
+	ID           int32              `json:"id"`
+	OrderNumber  string             `json:"order_number"`
+	ProductID    pgtype.Int4        `json:"product_id"`
+	CustomerName string             `json:"customer_name"`
+	TotalAmount  pgtype.Int4        `json:"total_amount"`
+	Status       string             `json:"status"`
+	Platform     string             `json:"platform"`
+	Destination  string             `json:"destination"`
+	PriceIdr     pgtype.Int4        `json:"price_idr"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (UpdateOrderStatusRow, error) {
+	row := q.db.QueryRow(ctx, updateOrderStatus, arg.ID, arg.Status)
+	var i UpdateOrderStatusRow
+	err := row.Scan(
+		&i.ID,
+		&i.OrderNumber,
+		&i.ProductID,
+		&i.CustomerName,
+		&i.TotalAmount,
+		&i.Status,
+		&i.Platform,
+		&i.Destination,
+		&i.PriceIdr,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET username = COALESCE(NULLIF($2, ''), username),
@@ -394,7 +472,7 @@ SET username = COALESCE(NULLIF($2, ''), username),
     password_hash = COALESCE(NULLIF($5, ''), password_hash),
     updated_at = now()
 WHERE id = $1
-RETURNING id, full_name, username, email
+RETURNING id, full_name, username, email, password_hash
 `
 
 type UpdateUserParams struct {
@@ -406,10 +484,11 @@ type UpdateUserParams struct {
 }
 
 type UpdateUserRow struct {
-	ID       int32  `json:"id"`
-	FullName string `json:"full_name"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
+	ID           int32  `json:"id"`
+	FullName     string `json:"full_name"`
+	Username     string `json:"username"`
+	Email        string `json:"email"`
+	PasswordHash string `json:"password_hash"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
@@ -426,6 +505,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.FullName,
 		&i.Username,
 		&i.Email,
+		&i.PasswordHash,
 	)
 	return i, err
 }

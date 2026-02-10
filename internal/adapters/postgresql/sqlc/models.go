@@ -17,6 +17,8 @@ type Order struct {
 	Platform     string             `json:"platform"`
 	Destination  string             `json:"destination"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	PriceIdr     pgtype.Int4        `json:"price_idr"`
+	ProductID    pgtype.Int4        `json:"product_id"`
 }
 
 type Product struct {

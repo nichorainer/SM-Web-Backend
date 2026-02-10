@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 	"strings"
+	"strconv"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
@@ -14,11 +15,13 @@ import (
 // CreateOrderParams represents the JSON payload from the frontend
 type CreateOrderParams struct {
 	OrderNumber   string `json:"order_number"`
+	ProductID     int32  `json:"product_id"`
 	CustomerName  string `json:"customer_name"`
 	Platform      string `json:"platform"`
 	Destination   string `json:"destination"`
 	TotalAmount   int32  `json:"total_amount"`
 	Status        string `json:"status"`
+	PriceIDR      int32  `json:"price_idr"`
 	CreatedAt     string `json:"created_at"`
 }
 
@@ -44,14 +47,15 @@ func (s *Server) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		normalizedStatus = "shipping"
 	}
 
-
 	arg := repo.CreateOrderParams{
 		OrderNumber:  req.OrderNumber,
+		ProductID:    pgtype.Int4{Int32: req.ProductID, Valid: true},
 		CustomerName: req.CustomerName,
 		Platform:     req.Platform,
 		Destination:  req.Destination,
 		TotalAmount:  pgtype.Int4{Int32: req.TotalAmount, Valid: true},
 		Status:       normalizedStatus,
+		PriceIdr:     pgtype.Int4{Int32: req.PriceIDR, Valid: true},
 		CreatedAt:    pgtype.Timestamptz{Time: createdAt, Valid: true},
 	}
 
@@ -89,9 +93,57 @@ func (s *Server) ListOrders(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(orders); err != nil {
 		http.Error(w, "failed to encode response", http.StatusInternalServerError)
 	}
+}
+
+// UpdateOrderStatus updates the status of an existing order
+func (s *Server) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
+    // ambil order_id dari query param
+    orderIDStr := r.URL.Query().Get("id")
+    if orderIDStr == "" {
+        http.Error(w, "missing order id", http.StatusBadRequest)
+        return
+    }
+
+    // konversi string → int32
+    orderIDInt, err := strconv.Atoi(orderIDStr)
+    if err != nil {
+        http.Error(w, "invalid order id", http.StatusBadRequest)
+        return
+    }
+
+    // decode payload JSON { "status": "completed" }
+    var payload struct {
+        Status string `json:"status"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+        http.Error(w, "invalid json: "+err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    // normalize status
+    normalizedStatus := strings.ToLower(payload.Status)
+    if normalizedStatus == "shipped" {
+        normalizedStatus = "shipping"
+    }
+
+    // panggil query sqlc untuk update
+    arg := repo.UpdateOrderStatusParams{
+        ID:     int32(orderIDInt),
+        Status: normalizedStatus,
+    }
+
+    order, err := s.Repo.UpdateOrderStatus(r.Context(), arg)
+    if err != nil {
+        http.Error(w, "failed to update order status: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(order); err != nil {
+        http.Error(w, "failed to encode response", http.StatusInternalServerError)
+    }
 }

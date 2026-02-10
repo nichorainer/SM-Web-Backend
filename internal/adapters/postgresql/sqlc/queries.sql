@@ -75,29 +75,38 @@ LIMIT $1 OFFSET $2;
 -- name: CreateOrder :one
 INSERT INTO orders (
     order_number,
+    product_id,
     customer_name,
     total_amount,
     status,
     platform,
     destination,
+    price_idr,
     created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, order_number, customer_name, total_amount, status, platform, destination, created_at;
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+RETURNING id, order_number, product_id, customer_name, total_amount, status, platform, destination, price_idr, created_at;
 
 -- name: ListOrders :many
 SELECT
-  id,
   order_number,
+  product_id,
   customer_name,
   total_amount,
   status,
   platform,
   destination,
+  price_idr,
   created_at
 FROM orders
 ORDER BY id DESC
 LIMIT $1 OFFSET $2;
+
+-- name: UpdateOrderStatus :one
+UPDATE orders
+SET status = $2, updated_at = now()
+WHERE id = $1
+RETURNING id, order_number, product_id, customer_name, total_amount, status, platform, destination, price_idr, created_at;
 
 -- Utility queries
 
