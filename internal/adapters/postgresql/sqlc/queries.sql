@@ -75,38 +75,58 @@ LIMIT $1 OFFSET $2;
 -- name: CreateOrder :one
 INSERT INTO orders (
     order_number,
+    id_from_product,
     product_id,
     customer_name,
-    total_amount,
-    status,
     platform,
     destination,
+    total_amount,
+    status,
     price_idr,
     created_at
+) VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, order_number, product_id, customer_name, total_amount, status, platform, destination, price_idr, created_at;
+RETURNING *;
 
--- name: ListOrders :many
-SELECT
-  order_number,
-  product_id,
-  customer_name,
-  total_amount,
-  status,
-  platform,
-  destination,
-  price_idr,
-  created_at
+-- name: GetOrderByID :one
+SELECT * FROM orders
+WHERE id = $1;
+
+-- name: GetLastOrderNumber :one
+SELECT order_number
 FROM orders
 ORDER BY id DESC
+LIMIT 1;
+
+-- name: ListOrdersWithProduct :many
+SELECT
+  o.id,
+  o.order_number,
+  o.id_from_product,       -- FK ke products.id
+  o.product_id,            -- kode produk (text)
+  o.customer_name,
+  o.total_amount,
+  o.status,
+  o.platform,
+  o.destination,
+  o.price_idr,             -- harga produk
+  o.created_at,
+  p.product_name
+FROM orders o
+JOIN products p ON o.id_from_product = p.id
+ORDER BY o.id DESC
 LIMIT $1 OFFSET $2;
 
 -- name: UpdateOrderStatus :one
 UPDATE orders
-SET status = $2, updated_at = now()
+SET status = $2
 WHERE id = $1
-RETURNING id, order_number, product_id, customer_name, total_amount, status, platform, destination, price_idr, created_at;
+RETURNING *;
+
+-- name: DeleteOrder :exec
+DELETE FROM orders
+WHERE id = $1;
 
 -- Utility queries
 

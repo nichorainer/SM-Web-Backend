@@ -9,16 +9,17 @@ import (
 )
 
 type Order struct {
-	ID           int32              `json:"id"`
-	OrderNumber  string             `json:"order_number"`
-	CustomerName string             `json:"customer_name"`
-	TotalAmount  pgtype.Int4        `json:"total_amount"`
-	Status       string             `json:"status"`
-	Platform     string             `json:"platform"`
-	Destination  string             `json:"destination"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	PriceIdr     pgtype.Int4        `json:"price_idr"`
-	ProductID    pgtype.Int4        `json:"product_id"`
+	ID            int32              `json:"id"`
+	OrderNumber   string             `json:"order_number"`
+	CustomerName  string             `json:"customer_name"`
+	TotalAmount   pgtype.Int4        `json:"total_amount"`
+	Status        string             `json:"status"`
+	Platform      string             `json:"platform"`
+	Destination   string             `json:"destination"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	IDFromProduct pgtype.Int4        `json:"id_from_product"`
+	ProductID     pgtype.Text        `json:"product_id"`
+	PriceIdr      pgtype.Int4        `json:"price_idr"`
 }
 
 type Product struct {

@@ -10,21 +10,24 @@ import (
 
 type Querier interface {
 	// Orders
-	CreateOrder(ctx context.Context, arg CreateOrderParams) (CreateOrderRow, error)
+	CreateOrder(ctx context.Context, arg CreateOrderParams) (Order, error)
 	// Products
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	// internal/adapters/postgresql/sqlc/queries.sql
 	// Users
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
+	DeleteOrder(ctx context.Context, id int32) error
+	GetLastOrderNumber(ctx context.Context) (string, error)
+	GetOrderByID(ctx context.Context, id int32) (Order, error)
 	GetProductByProductID(ctx context.Context, productID string) (Product, error)
 	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (GetUserByUsernameOrEmailRow, error)
-	ListOrders(ctx context.Context, arg ListOrdersParams) ([]ListOrdersRow, error)
+	ListOrdersWithProduct(ctx context.Context, arg ListOrdersWithProductParams) ([]ListOrdersWithProductRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
 	// Utility queries
 	// This is a helper to get a next sequence number for product id generation if you prefer DB-side sequence.
 	NextProductSequence(ctx context.Context) (int64, error)
-	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (UpdateOrderStatusRow, error)
+	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
 	UserByID(ctx context.Context, id int32) (UserByIDRow, error)
 }

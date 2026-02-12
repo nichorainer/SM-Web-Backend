@@ -66,8 +66,13 @@ func (app *application) mount() http.Handler {
 	})
 
 	// Orders Routes
-	r.Get("/orders", server.ListOrders)
+	r.Get("/orders", server.ListOrdersWithProduct)
 	r.Post("/orders", server.CreateOrder)
+	r.Get("/orders/order-number", server.GetNextOrderNumber)
+
+	// Update Status and Delete Order
+	r.Put("/orders/{id}/status", server.UpdateOrderStatus)
+    r.Delete("/orders/{id}", server.DeleteOrder)
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MethodNotAllowed: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
