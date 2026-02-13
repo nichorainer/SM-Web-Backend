@@ -19,7 +19,7 @@ type Querier interface {
 	DeleteOrder(ctx context.Context, id int32) error
 	GetLastOrderNumber(ctx context.Context) (string, error)
 	GetOrderByID(ctx context.Context, id int32) (Order, error)
-	GetProductByProductID(ctx context.Context, productID string) (Product, error)
+	GetProductByID(ctx context.Context, id int32) (Product, error)
 	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (GetUserByUsernameOrEmailRow, error)
 	ListOrdersWithProduct(ctx context.Context, arg ListOrdersWithProductParams) ([]ListOrdersWithProductRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)
@@ -28,6 +28,9 @@ type Querier interface {
 	// This is a helper to get a next sequence number for product id generation if you prefer DB-side sequence.
 	NextProductSequence(ctx context.Context) (int64, error)
 	UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusParams) (Order, error)
+	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
+	UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) (Product, error)
+	UpdateProductStockByDelta(ctx context.Context, arg UpdateProductStockByDeltaParams) (Product, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
 	UserByID(ctx context.Context, id int32) (UserByIDRow, error)
 }

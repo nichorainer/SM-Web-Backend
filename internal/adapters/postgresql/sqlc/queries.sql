@@ -40,9 +40,9 @@ RETURNING id, full_name, username, email, password_hash;
 -- name: CreateProduct :one
 INSERT INTO products (product_id, product_name, supplier_name, category, price_idr, stock)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at;
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at;
 
--- name: GetProductByProductID :one
+-- name: GetProductByID :one
 SELECT
   id,
   product_id,
@@ -51,9 +51,10 @@ SELECT
   category,
   price_idr,
   stock,
-  created_at
+  created_at,
+  updated_at
 FROM products
-WHERE product_id = $1
+WHERE id = $1
 LIMIT 1;
 
 -- name: ListProducts :many
@@ -65,10 +66,38 @@ SELECT
   category,
   price_idr,
   stock,
-  created_at
+  created_at,
+  updated_at
 FROM products
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;
+
+-- name: UpdateProductStock :one
+UPDATE products
+SET stock = $2,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at;
+
+-- name: UpdateProductStockByDelta :one
+UPDATE products
+SET stock = stock + $2,
+    updated_at = now()
+WHERE id = $1
+  AND (stock + $2) >= 0
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at;
+
+-- name: UpdateProduct :one
+UPDATE products
+SET product_id    = $2,
+    product_name  = $3,
+    supplier_name = $4,
+    category      = $5,
+    price_idr     = $6,
+    stock         = $7,
+    updated_at    = now()
+WHERE id = $1
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at;
 
 -- Orders
 

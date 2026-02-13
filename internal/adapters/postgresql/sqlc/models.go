@@ -31,6 +31,7 @@ type Product struct {
 	PriceIdr     int64              `json:"price_idr"`
 	Stock        int32              `json:"stock"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {

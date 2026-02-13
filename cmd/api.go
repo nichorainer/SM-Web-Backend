@@ -27,7 +27,7 @@ func (app *application) mount() http.Handler {
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
 	}))
@@ -63,6 +63,7 @@ func (app *application) mount() http.Handler {
 		r.Get("/", server.ListProducts)
 		r.Post("/", server.CreateProduct)
 		r.Get("/{id}", server.GetProductByID)
+		r.Patch("/{id}/stock", server.UpdateProductStock)
 	})
 
 	// Orders Routes

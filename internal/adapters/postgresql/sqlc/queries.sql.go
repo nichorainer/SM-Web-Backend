@@ -78,7 +78,7 @@ const createProduct = `-- name: CreateProduct :one
 
 INSERT INTO products (product_id, product_name, supplier_name, category, price_idr, stock)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at
 `
 
 type CreateProductParams struct {
@@ -110,6 +110,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.PriceIdr,
 		&i.Stock,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -215,7 +216,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id int32) (Order, error) {
 	return i, err
 }
 
-const getProductByProductID = `-- name: GetProductByProductID :one
+const getProductByID = `-- name: GetProductByID :one
 SELECT
   id,
   product_id,
@@ -224,14 +225,15 @@ SELECT
   category,
   price_idr,
   stock,
-  created_at
+  created_at,
+  updated_at
 FROM products
-WHERE product_id = $1
+WHERE id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetProductByProductID(ctx context.Context, productID string) (Product, error) {
-	row := q.db.QueryRow(ctx, getProductByProductID, productID)
+func (q *Queries) GetProductByID(ctx context.Context, id int32) (Product, error) {
+	row := q.db.QueryRow(ctx, getProductByID, id)
 	var i Product
 	err := row.Scan(
 		&i.ID,
@@ -242,6 +244,7 @@ func (q *Queries) GetProductByProductID(ctx context.Context, productID string) (
 		&i.PriceIdr,
 		&i.Stock,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -369,7 +372,8 @@ SELECT
   category,
   price_idr,
   stock,
-  created_at
+  created_at,
+  updated_at
 FROM products
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -398,6 +402,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 			&i.PriceIdr,
 			&i.Stock,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -498,6 +503,115 @@ func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusPa
 		&i.IDFromProduct,
 		&i.ProductID,
 		&i.PriceIdr,
+	)
+	return i, err
+}
+
+const updateProduct = `-- name: UpdateProduct :one
+UPDATE products
+SET product_id    = $2,
+    product_name  = $3,
+    supplier_name = $4,
+    category      = $5,
+    price_idr     = $6,
+    stock         = $7,
+    updated_at    = now()
+WHERE id = $1
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at
+`
+
+type UpdateProductParams struct {
+	ID           int32  `json:"id"`
+	ProductID    string `json:"product_id"`
+	ProductName  string `json:"product_name"`
+	SupplierName string `json:"supplier_name"`
+	Category     string `json:"category"`
+	PriceIdr     int64  `json:"price_idr"`
+	Stock        int32  `json:"stock"`
+}
+
+func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateProduct,
+		arg.ID,
+		arg.ProductID,
+		arg.ProductName,
+		arg.SupplierName,
+		arg.Category,
+		arg.PriceIdr,
+		arg.Stock,
+	)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.ProductName,
+		&i.SupplierName,
+		&i.Category,
+		&i.PriceIdr,
+		&i.Stock,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateProductStock = `-- name: UpdateProductStock :one
+UPDATE products
+SET stock = $2,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at
+`
+
+type UpdateProductStockParams struct {
+	ID    int32 `json:"id"`
+	Stock int32 `json:"stock"`
+}
+
+func (q *Queries) UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateProductStock, arg.ID, arg.Stock)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.ProductName,
+		&i.SupplierName,
+		&i.Category,
+		&i.PriceIdr,
+		&i.Stock,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateProductStockByDelta = `-- name: UpdateProductStockByDelta :one
+UPDATE products
+SET stock = stock + $2,
+    updated_at = now()
+WHERE id = $1
+  AND (stock + $2) >= 0
+RETURNING id, product_id, product_name, supplier_name, category, price_idr, stock, created_at, updated_at
+`
+
+type UpdateProductStockByDeltaParams struct {
+	ID    int32 `json:"id"`
+	Stock int32 `json:"stock"`
+}
+
+func (q *Queries) UpdateProductStockByDelta(ctx context.Context, arg UpdateProductStockByDeltaParams) (Product, error) {
+	row := q.db.QueryRow(ctx, updateProductStockByDelta, arg.ID, arg.Stock)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.ProductID,
+		&i.ProductName,
+		&i.SupplierName,
+		&i.Category,
+		&i.PriceIdr,
+		&i.Stock,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
