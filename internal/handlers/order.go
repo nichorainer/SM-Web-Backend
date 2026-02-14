@@ -14,7 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/go-chi/chi/v5"
 
-	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
+	repo "github.com/nichorainer/backend-go/internal/adapters/postgresql/sqlc"
 )
 
 // CreateOrderParams represents the JSON payload from the frontend

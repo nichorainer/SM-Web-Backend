@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/yourorg/backend-go/internal/env"
-	"github.com/yourorg/backend-go/internal/config"
+	"github.com/nichorainer/backend-go/internal/env"
+	"github.com/nichorainer/backend-go/internal/config"
 )
 
 func main() {

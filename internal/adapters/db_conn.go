@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/yourorg/backend-go/internal/env"
+	"github.com/nichorainer/backend-go/internal/env"
 )
 
 // NewDB opens a PostgreSQL connection using values from cfg.

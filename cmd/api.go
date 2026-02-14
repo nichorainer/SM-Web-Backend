@@ -10,8 +10,8 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
-	"github.com/yourorg/backend-go/internal/handlers"
+	repo "github.com/nichorainer/backend-go/internal/adapters/postgresql/sqlc"
+	"github.com/nichorainer/backend-go/internal/handlers"
 )
 
 // Mount Server
@@ -61,17 +61,23 @@ func (app *application) mount() http.Handler {
 	// Products Routes
 	r.Route("/products", func(r chi.Router) {
 		r.Get("/", server.ListProducts)
-		r.Post("/", server.CreateProduct)
 		r.Get("/{id}", server.GetProductByID)
+		r.Post("/", server.CreateProduct)
 		r.Patch("/{id}/stock", server.UpdateProductStock)
 	})
 
 	// Orders Routes
+	r.Route("/orders", func(r chi.Router) {
+		r.Get("/", server.ListOrdersWithProduct)
+		r.Post("/", server.CreateOrder)
+		r.Get("/order-number", server.GetNextOrderNumber)
+		r.Put("/{id}/status", server.UpdateOrderStatus)
+    	r.Delete("/{id}", server.DeleteOrder)
+	})
+	
 	r.Get("/orders", server.ListOrdersWithProduct)
 	r.Post("/orders", server.CreateOrder)
 	r.Get("/orders/order-number", server.GetNextOrderNumber)
-
-	// Update Status and Delete Order
 	r.Put("/orders/{id}/status", server.UpdateOrderStatus)
     r.Delete("/orders/{id}", server.DeleteOrder)
 

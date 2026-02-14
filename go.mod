@@ -1,4 +1,4 @@
-module github.com/yourorg/backend-go
+module github.com/nichorainer/backend-go
 
 go 1.24.0
 

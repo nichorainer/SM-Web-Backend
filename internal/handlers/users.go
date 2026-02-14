@@ -12,10 +12,11 @@ import (
     
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	repo "github.com/yourorg/backend-go/internal/adapters/postgresql/sqlc"
-	"github.com/yourorg/backend-go/internal/config"
-	"github.com/yourorg/backend-go/internal/models"
-	"golang.org/x/crypto/bcrypt"
+    "golang.org/x/crypto/bcrypt"
+    
+	repo "github.com/nichorainer/backend-go/internal/adapters/postgresql/sqlc"
+	"github.com/nichorainer/backend-go/internal/config"
+	"github.com/nichorainer/backend-go/internal/models"
 )
 
 // Standard response API
