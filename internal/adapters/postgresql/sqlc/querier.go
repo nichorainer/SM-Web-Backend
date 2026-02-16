@@ -32,6 +32,7 @@ type Querier interface {
 	UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) (Product, error)
 	UpdateProductStockByDelta(ctx context.Context, arg UpdateProductStockByDeltaParams) (Product, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)
+	UpdateUserPermissions(ctx context.Context, arg UpdateUserPermissionsParams) error
 	UserByID(ctx context.Context, id int32) (UserByIDRow, error)
 }
 

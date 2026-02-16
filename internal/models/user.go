@@ -8,4 +8,7 @@ type User struct {
     Email    string `json:"email"`
     Role     string `json:"role"`
     Password string `json:"password,omitempty"`
+    CreatedAt string `json:"created_at"`
+    UpdatedAt string `json:"updated_at"`
+    Permissions []string `json:"permissions,omitempty"`
 }

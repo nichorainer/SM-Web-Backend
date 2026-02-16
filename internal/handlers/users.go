@@ -389,3 +389,43 @@ func HashPassword(pw string) (string, error) {
     }
     return string(b), nil
 }
+
+// UpdatePermissions handler for PUT /users/permissions
+func (s *Server) UpdatePermissions(w http.ResponseWriter, r *http.Request) {
+    ctx := r.Context()
+
+    var req struct {
+        UserID int32    `json:"user_id"`
+        Perms  []string `json:"permissions"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "invalid request", http.StatusBadRequest)
+        return
+    }
+
+    db := config.GetDB()
+    if db == nil {
+        http.Error(w, "Database not initialized", http.StatusInternalServerError)
+        return
+    }
+
+    _, err := db.Exec(
+        ctx,
+        `UPDATE users
+         SET permissions = $2,
+             updated_at = NOW()
+         WHERE id = $1`,
+        req.UserID,
+        req.Perms,
+    )
+    if err != nil {
+        log.Printf("failed to update permissions: %v", err)
+        http.Error(w, "failed to update permissions", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{
+        "message": "permissions updated",
+    })
+}

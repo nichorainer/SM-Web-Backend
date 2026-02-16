@@ -17,6 +17,7 @@ type Order struct {
 	Platform      string             `json:"platform"`
 	Destination   string             `json:"destination"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	IDFromProduct pgtype.Int4        `json:"id_from_product"`
 	ProductID     pgtype.Text        `json:"product_id"`
 	PriceIdr      pgtype.Int4        `json:"price_idr"`
@@ -44,4 +45,5 @@ type User struct {
 	Role         string           `json:"role"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
+	Permissions  []string         `json:"permissions"`
 }

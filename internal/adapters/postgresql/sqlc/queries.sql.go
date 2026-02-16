@@ -27,7 +27,7 @@ INSERT INTO orders (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-RETURNING id, order_number, customer_name, total_amount, status, platform, destination, created_at, id_from_product, product_id, price_idr
+RETURNING id, order_number, customer_name, total_amount, status, platform, destination, created_at, updated_at, id_from_product, product_id, price_idr
 `
 
 type CreateOrderParams struct {
@@ -67,6 +67,7 @@ func (q *Queries) CreateOrder(ctx context.Context, arg CreateOrderParams) (Order
 		&i.Platform,
 		&i.Destination,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IDFromProduct,
 		&i.ProductID,
 		&i.PriceIdr,
@@ -193,7 +194,7 @@ func (q *Queries) GetLastOrderNumber(ctx context.Context) (string, error) {
 }
 
 const getOrderByID = `-- name: GetOrderByID :one
-SELECT id, order_number, customer_name, total_amount, status, platform, destination, created_at, id_from_product, product_id, price_idr FROM orders
+SELECT id, order_number, customer_name, total_amount, status, platform, destination, created_at, updated_at, id_from_product, product_id, price_idr FROM orders
 WHERE id = $1
 `
 
@@ -209,6 +210,7 @@ func (q *Queries) GetOrderByID(ctx context.Context, id int32) (Order, error) {
 		&i.Platform,
 		&i.Destination,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IDFromProduct,
 		&i.ProductID,
 		&i.PriceIdr,
@@ -480,7 +482,7 @@ const updateOrderStatus = `-- name: UpdateOrderStatus :one
 UPDATE orders
 SET status = $2
 WHERE id = $1
-RETURNING id, order_number, customer_name, total_amount, status, platform, destination, created_at, id_from_product, product_id, price_idr
+RETURNING id, order_number, customer_name, total_amount, status, platform, destination, created_at, updated_at, id_from_product, product_id, price_idr
 `
 
 type UpdateOrderStatusParams struct {
@@ -500,6 +502,7 @@ func (q *Queries) UpdateOrderStatus(ctx context.Context, arg UpdateOrderStatusPa
 		&i.Platform,
 		&i.Destination,
 		&i.CreatedAt,
+		&i.UpdatedAt,
 		&i.IDFromProduct,
 		&i.ProductID,
 		&i.PriceIdr,
@@ -660,6 +663,22 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.PasswordHash,
 	)
 	return i, err
+}
+
+const updateUserPermissions = `-- name: UpdateUserPermissions :exec
+UPDATE users
+SET permissions = $2, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateUserPermissionsParams struct {
+	ID          int32    `json:"id"`
+	Permissions []string `json:"permissions"`
+}
+
+func (q *Queries) UpdateUserPermissions(ctx context.Context, arg UpdateUserPermissionsParams) error {
+	_, err := q.db.Exec(ctx, updateUserPermissions, arg.ID, arg.Permissions)
+	return err
 }
 
 const userByID = `-- name: UserByID :one

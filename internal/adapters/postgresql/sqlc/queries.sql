@@ -35,6 +35,11 @@ SET username = COALESCE(NULLIF($2, ''), username),
 WHERE id = $1
 RETURNING id, full_name, username, email, password_hash;
 
+-- name: UpdateUserPermissions :exec
+UPDATE users
+SET permissions = $2, updated_at = now()
+WHERE id = $1;
+
 -- Products
 
 -- name: CreateProduct :one

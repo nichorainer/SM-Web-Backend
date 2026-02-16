@@ -75,11 +75,8 @@ func (app *application) mount() http.Handler {
     	r.Delete("/{id}", server.DeleteOrder)
 	})
 	
-	r.Get("/orders", server.ListOrdersWithProduct)
-	r.Post("/orders", server.CreateOrder)
-	r.Get("/orders/order-number", server.GetNextOrderNumber)
-	r.Put("/orders/{id}/status", server.UpdateOrderStatus)
-    r.Delete("/orders/{id}", server.DeleteOrder)
+	// Users Page
+	r.Put("/users/permissions", server.UpdatePermissions)
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MethodNotAllowed: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)
