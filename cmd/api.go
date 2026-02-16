@@ -51,12 +51,15 @@ func (app *application) mount() http.Handler {
 	r.Post("/register", server.CreateUser)
 	r.Post("/login", server.LoginUser)
 
-	// Users
+	// Users Routes
 	r.Get("/users", server.ListUsers)
 	r.Get("/users/{id}", server.GetUserByID)
+	// For Profile Page
 	r.Get("/users/me", server.GetProfile)
 	r.Put("/users/{id}", handlers.UpdateUser)
 	r.Put("/users/me", handlers.UpdateUser)
+	// For Users Page
+	r.Put("/users/permissions", server.UpdatePermissions)
 
 	// Products Routes
 	r.Route("/products", func(r chi.Router) {
@@ -74,9 +77,6 @@ func (app *application) mount() http.Handler {
 		r.Put("/{id}/status", server.UpdateOrderStatus)
     	r.Delete("/{id}", server.DeleteOrder)
 	})
-	
-	// Users Page
-	r.Put("/users/permissions", server.UpdatePermissions)
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("MethodNotAllowed: %s %s from %s", r.Method, r.URL.Path, r.RemoteAddr)

@@ -417,7 +417,16 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]P
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT user_id, username, email, full_name, role, created_at
+SELECT 
+  id,
+  user_id,
+  username, 
+  email, 
+  full_name, 
+  role, 
+  permissions,
+  created_at, 
+  updated_at
 FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2
@@ -429,12 +438,15 @@ type ListUsersParams struct {
 }
 
 type ListUsersRow struct {
-	UserID    string           `json:"user_id"`
-	Username  string           `json:"username"`
-	Email     string           `json:"email"`
-	FullName  string           `json:"full_name"`
-	Role      string           `json:"role"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+	ID          int32            `json:"id"`
+	UserID      string           `json:"user_id"`
+	Username    string           `json:"username"`
+	Email       string           `json:"email"`
+	FullName    string           `json:"full_name"`
+	Role        string           `json:"role"`
+	Permissions []string         `json:"permissions"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
@@ -447,12 +459,15 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 	for rows.Next() {
 		var i ListUsersRow
 		if err := rows.Scan(
+			&i.ID,
 			&i.UserID,
 			&i.Username,
 			&i.Email,
 			&i.FullName,
 			&i.Role,
+			&i.Permissions,
 			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

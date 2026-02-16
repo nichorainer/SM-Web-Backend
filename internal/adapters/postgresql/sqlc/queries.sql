@@ -8,7 +8,16 @@ VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, user_id, username, email, full_name, role, created_at, updated_at;
 
 -- name: ListUsers :many
-SELECT user_id, username, email, full_name, role, created_at
+SELECT 
+  id,
+  user_id,
+  username, 
+  email, 
+  full_name, 
+  role, 
+  permissions,
+  created_at, 
+  updated_at
 FROM users
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2;

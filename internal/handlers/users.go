@@ -182,13 +182,37 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
 // ListUsers returns all users.
 func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
     params := repo.ListUsersParams{Limit: 100, Offset: 0}
-    users, err := s.Repo.ListUsers(r.Context(), params)
+    rows, err := s.Repo.ListUsers(r.Context(), params)
     if err != nil {
         log.Println("failed to list users:", err)
         w.WriteHeader(http.StatusInternalServerError)
         json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to list users"})
         return
     }
+
+    var users []models.User
+    for _, r := range rows {
+        permMap := make(map[string]bool)
+        for _, p := range r.Permissions {
+            parts := strings.Split(p, ":")
+            if len(parts) == 2 {
+                permMap[parts[0]] = (parts[1] == "true")
+            }
+        }
+
+        users = append(users, models.User{
+            ID:          int(r.ID),
+            UserID:      r.UserID,
+            Username:    r.Username,
+            Email:       r.Email,
+            FullName:    r.FullName,
+            Role:        r.Role,
+            CreatedAt:   r.CreatedAt.Time.String(),
+            UpdatedAt:   r.UpdatedAt.Time.String(),
+            Permissions: permMap,
+        })
+    }
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(APIResponse{Status: "success", Data: users})
 }
