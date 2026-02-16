@@ -179,7 +179,6 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
     })
 }
 
-// ListUsers returns all users.
 func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
     params := repo.ListUsersParams{Limit: 100, Offset: 0}
     rows, err := s.Repo.ListUsers(r.Context(), params)
