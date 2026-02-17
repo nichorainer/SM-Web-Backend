@@ -60,6 +60,7 @@ func (app *application) mount() http.Handler {
 	r.Put("/users/me", handlers.UpdateUser)
 	// For Users Page
 	r.Put("/users/permissions", server.UpdatePermissions)
+	r.Put("/users/role", server.UpdateUserRole)
 
 	// Products Routes
 	r.Route("/products", func(r chi.Router) {

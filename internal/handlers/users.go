@@ -452,3 +452,39 @@ func (s *Server) UpdatePermissions(w http.ResponseWriter, r *http.Request) {
         "message": "permissions updated",
     })
 }
+
+// Handler untuk update role
+func (s *Server) UpdateUserRole (w http.ResponseWriter, r *http.Request) {
+    var req struct {
+        ID int    `json:"id"`
+        Role   string `json:"role"`
+    }
+
+    // decode JSON dari body
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "Invalid request body", http.StatusBadRequest)
+        return
+    }
+
+    // validasi role
+    if req.Role != "staff" && req.Role != "admin" {
+        http.Error(w, "Invalid role value", http.StatusBadRequest)
+        return
+    }
+
+    db := config.GetDB()
+    if db == nil {
+        http.Error(w, "Database not initialized", http.StatusInternalServerError)
+        return
+    }
+
+    // update DB
+    _, err := db.Exec(r.Context(), `UPDATE users SET role = $2 WHERE id = $1`, req.ID, req.Role)
+    if err != nil {
+        http.Error(w, "Failed to update role", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Write([]byte(`{"status":"ok"}`))
+}
