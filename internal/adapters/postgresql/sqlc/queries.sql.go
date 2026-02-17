@@ -119,9 +119,9 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 const createUser = `-- name: CreateUser :one
 
 
-INSERT INTO users (user_id, username, email, full_name, password_hash, role)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, user_id, username, email, full_name, role, created_at, updated_at
+INSERT INTO users (user_id, username, email, full_name, password_hash, role, permissions)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, user_id, username, email, full_name, role, permissions, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -131,17 +131,19 @@ type CreateUserParams struct {
 	FullName     string `json:"full_name"`
 	PasswordHash string `json:"password_hash"`
 	Role         string `json:"role"`
+	Permissions  []byte `json:"permissions"`
 }
 
 type CreateUserRow struct {
-	ID        int32            `json:"id"`
-	UserID    string           `json:"user_id"`
-	Username  string           `json:"username"`
-	Email     string           `json:"email"`
-	FullName  string           `json:"full_name"`
-	Role      string           `json:"role"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	ID          int32            `json:"id"`
+	UserID      string           `json:"user_id"`
+	Username    string           `json:"username"`
+	Email       string           `json:"email"`
+	FullName    string           `json:"full_name"`
+	Role        string           `json:"role"`
+	Permissions []byte           `json:"permissions"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
 // internal/adapters/postgresql/sqlc/queries.sql
@@ -154,6 +156,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.FullName,
 		arg.PasswordHash,
 		arg.Role,
+		arg.Permissions,
 	)
 	var i CreateUserRow
 	err := row.Scan(
@@ -163,6 +166,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Email,
 		&i.FullName,
 		&i.Role,
+		&i.Permissions,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

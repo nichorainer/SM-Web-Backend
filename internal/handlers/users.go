@@ -28,10 +28,11 @@ type APIResponse struct {
 
 // CreateUserRequest is the expected JSON body for creating a user.
 type CreateUserRequest struct {
-    FullName string `json:"full_name"`
-    Username string `json:"username"`
-    Email    string `json:"email"`
-    Password string `json:"password"`
+    FullName    string         `json:"full_name"`
+    Username    string         `json:"username"`
+    Email       string         `json:"email"`
+    Password    string         `json:"password"`
+    Permissions map[string]bool `json:"permissions,omitempty"`
 }
 
 // UserResponse is the response struct for user data.
@@ -93,6 +94,7 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
         json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to check existing user"})
         return
     }
+
     if existing.ID != 0 {
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusConflict)
@@ -108,13 +110,29 @@ func (s *Server) CreateUser(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    if req.Permissions == nil {
+        req.Permissions = map[string]bool{
+            "orders":   true,
+            "products": true,
+            "users":    false,
+        }
+    }
+
+    permBytes, err := json.Marshal(req.Permissions)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to process permissions"})
+        return
+    }
+
     arg := repo.CreateUserParams{
         UserID:       uid,
         FullName:     req.FullName,
         Username:     req.Username,
         Email:        req.Email,
         PasswordHash: hashed,
-        Role:         "admin",
+        Role:         "staff",
+        Permissions: permBytes,
     }
 
     u, err := s.Repo.CreateUser(r.Context(), arg)
@@ -212,12 +230,10 @@ func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
     var users []models.User
     for _, r := range rows {
         permMap := make(map[string]bool)
-        permsStr := string(r.Permissions)
-        for _, p := range strings.Split(permsStr, ",") {
-            parts := strings.Split(p, ":")
-            if len(parts) == 2 {
-                permMap[parts[0]] = (parts[1] == "true")
-            }
+        if err := json.Unmarshal(r.Permissions, &permMap); err != nil {
+            log.Printf("failed to unmarshal permissions for user %d: %v", r.ID, err)
+            // default ke empty permissions kalau error
+            permMap = make(map[string]bool)
         }
 
         users = append(users, models.User{
@@ -439,8 +455,8 @@ func (s *Server) UpdatePermissions(w http.ResponseWriter, r *http.Request) {
     ctx := r.Context()
 
     var req struct {
-        UserID int32    `json:"user_id"`
-        Perms  []string `json:"permissions"`
+        UserID      int32              `json:"user_id"`
+        Permissions map[string]bool    `json:"permissions"`
     }
     if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
         http.Error(w, "invalid request", http.StatusBadRequest)
@@ -453,14 +469,22 @@ func (s *Server) UpdatePermissions(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    _, err := db.Exec(
+    // Convert map ke JSON string dulu untuk JSONB column
+    permsJSON, err := json.Marshal(req.Permissions)
+    if err != nil {
+        log.Printf("failed to marshal permissions: %v", err)
+        http.Error(w, "failed to process permissions", http.StatusInternalServerError)
+        return
+    }
+
+    _, err = db.Exec(
         ctx,
         `UPDATE users
          SET permissions = $2,
              updated_at = NOW()
          WHERE id = $1`,
         req.UserID,
-        req.Perms,
+        permsJSON,
     )
     if err != nil {
         log.Printf("failed to update permissions: %v", err)
@@ -474,7 +498,7 @@ func (s *Server) UpdatePermissions(w http.ResponseWriter, r *http.Request) {
     })
 }
 
-// Handler untuk update role
+// Handler for update role
 func (s *Server) UpdateUserRole (w http.ResponseWriter, r *http.Request) {
     var req struct {
         ID int    `json:"id"`
