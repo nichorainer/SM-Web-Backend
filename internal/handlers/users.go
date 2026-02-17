@@ -36,9 +36,10 @@ type CreateUserRequest struct {
 
 // UserResponse is the response struct for user data.
 type UserResponse struct {
-    ID       int32  `json:"id"`
-    Username string `json:"username"`
-    Email    string `json:"email"`
+    ID          int32  `json:"id"`
+    Username    string `json:"username"`
+    Email       string `json:"email"`
+    Permissions map[string]bool `json:"permissions"`
 }
 
 // CreateUser creates a new user (Register)
@@ -168,17 +169,36 @@ func (s *Server) LoginUser(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    var rawPerms []byte
+    err = s.DB.QueryRow(r.Context(),
+        "SELECT permissions FROM users WHERE id = $1", user.ID).Scan(&rawPerms)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "failed to load permissions"})
+        return
+    }
+
+    var perms map[string]bool
+    if err := json.Unmarshal(rawPerms, &perms); err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        json.NewEncoder(w).Encode(APIResponse{Status: "error", Message: "invalid permissions format"})
+        return
+    }
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(APIResponse{
         Status: "success",
         Data: UserResponse{
-            ID:       user.ID,
-            Username: user.Username,
-            Email:    user.Email,
+            ID:          user.ID,
+            Username:    user.Username,
+            Email:       user.Email,
+            Permissions: perms,
         },
     })
 }
 
+
+// List all users
 func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
     params := repo.ListUsersParams{Limit: 100, Offset: 0}
     rows, err := s.Repo.ListUsers(r.Context(), params)
@@ -192,7 +212,8 @@ func (s *Server) ListUsers(w http.ResponseWriter, r *http.Request) {
     var users []models.User
     for _, r := range rows {
         permMap := make(map[string]bool)
-        for _, p := range r.Permissions {
+        permsStr := string(r.Permissions)
+        for _, p := range strings.Split(permsStr, ",") {
             parts := strings.Split(p, ":")
             if len(parts) == 2 {
                 permMap[parts[0]] = (parts[1] == "true")

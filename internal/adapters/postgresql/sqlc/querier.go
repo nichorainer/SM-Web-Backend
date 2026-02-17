@@ -19,7 +19,9 @@ type Querier interface {
 	DeleteOrder(ctx context.Context, id int32) error
 	GetLastOrderNumber(ctx context.Context) (string, error)
 	GetOrderByID(ctx context.Context, id int32) (Order, error)
+	GetPermissionsByID(ctx context.Context, id int32) ([]byte, error)
 	GetProductByID(ctx context.Context, id int32) (Product, error)
+	GetTopProductsFromOrders(ctx context.Context) ([]GetTopProductsFromOrdersRow, error)
 	GetUserByUsernameOrEmail(ctx context.Context, arg GetUserByUsernameOrEmailParams) (GetUserByUsernameOrEmailRow, error)
 	ListOrdersWithProduct(ctx context.Context, arg ListOrdersWithProductParams) ([]ListOrdersWithProductRow, error)
 	ListProducts(ctx context.Context, arg ListProductsParams) ([]Product, error)

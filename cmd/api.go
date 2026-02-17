@@ -20,6 +20,7 @@ func (app *application) mount() http.Handler {
 
 	server := handlers.Server{
 		Repo: repo.New(app.db),
+		DB:   app.db,
 	}
 
 	// --- CORS middleware ---
@@ -77,6 +78,7 @@ func (app *application) mount() http.Handler {
 		r.Get("/order-number", server.GetNextOrderNumber)
 		r.Put("/{id}/status", server.UpdateOrderStatus)
     	r.Delete("/{id}", server.DeleteOrder)
+		r.Get("/top-products", server.GetTopProductsFromOrders)
 	})
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {

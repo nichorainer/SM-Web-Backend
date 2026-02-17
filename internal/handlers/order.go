@@ -222,3 +222,14 @@ func (s *Server) DeleteOrder(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(order)
 }
+
+// GetTopProductsFromOrders returns top 5 products based on total_amount
+func (s *Server) GetTopProductsFromOrders(w http.ResponseWriter, r *http.Request) {
+    products, err := s.Repo.GetTopProductsFromOrders(r.Context())
+    if err != nil {
+        http.Error(w, "failed to get top products: "+err.Error(), http.StatusInternalServerError)
+        return
+    }
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(products)
+}

@@ -45,5 +45,5 @@ type User struct {
 	Role         string           `json:"role"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
 	UpdatedAt    pgtype.Timestamp `json:"updated_at"`
-	Permissions  []string         `json:"permissions"`
+	Permissions  []byte           `json:"permissions"`
 }

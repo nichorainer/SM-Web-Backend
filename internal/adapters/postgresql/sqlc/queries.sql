@@ -54,6 +54,11 @@ UPDATE users
 SET role = $1
 WHERE id = $2;
 
+-- name: GetPermissionsByID :one
+SELECT permissions
+FROM users
+WHERE id = $1;
+
 -- Products
 
 -- name: CreateProduct :one
@@ -175,6 +180,16 @@ RETURNING *;
 -- name: DeleteOrder :exec
 DELETE FROM orders
 WHERE id = $1;
+
+-- name: GetTopProductsFromOrders :many
+SELECT o.product_id,
+       p.product_name,
+       SUM(o.total_amount) AS total_sold
+FROM orders o
+JOIN products p ON o.product_id = p.product_id
+GROUP BY o.product_id, p.product_name
+ORDER BY total_sold DESC
+LIMIT 5;
 
 -- Utility queries
 

@@ -9,12 +9,14 @@ import (
   "database/sql"
   
   "github.com/go-chi/chi/v5"
+  "github.com/jackc/pgx/v5/pgxpool"
   
   repo "github.com/nichorainer/backend-go/internal/adapters/postgresql/sqlc"
 )
 
 type Server struct {
   Repo repo.Querier
+  DB   *pgxpool.Pool
 }
 
 // CreateProductRequest is the expected JSON body for creating a product

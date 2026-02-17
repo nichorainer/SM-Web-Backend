@@ -218,6 +218,19 @@ func (q *Queries) GetOrderByID(ctx context.Context, id int32) (Order, error) {
 	return i, err
 }
 
+const getPermissionsByID = `-- name: GetPermissionsByID :one
+SELECT permissions
+FROM users
+WHERE id = $1
+`
+
+func (q *Queries) GetPermissionsByID(ctx context.Context, id int32) ([]byte, error) {
+	row := q.db.QueryRow(ctx, getPermissionsByID, id)
+	var permissions []byte
+	err := row.Scan(&permissions)
+	return permissions, err
+}
+
 const getProductByID = `-- name: GetProductByID :one
 SELECT
   id,
@@ -249,6 +262,43 @@ func (q *Queries) GetProductByID(ctx context.Context, id int32) (Product, error)
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getTopProductsFromOrders = `-- name: GetTopProductsFromOrders :many
+SELECT o.product_id,
+       p.product_name,
+       SUM(o.total_amount) AS total_sold
+FROM orders o
+JOIN products p ON o.product_id = p.product_id
+GROUP BY o.product_id, p.product_name
+ORDER BY total_sold DESC
+LIMIT 5
+`
+
+type GetTopProductsFromOrdersRow struct {
+	ProductID   pgtype.Text `json:"product_id"`
+	ProductName string      `json:"product_name"`
+	TotalSold   int64       `json:"total_sold"`
+}
+
+func (q *Queries) GetTopProductsFromOrders(ctx context.Context) ([]GetTopProductsFromOrdersRow, error) {
+	rows, err := q.db.Query(ctx, getTopProductsFromOrders)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetTopProductsFromOrdersRow
+	for rows.Next() {
+		var i GetTopProductsFromOrdersRow
+		if err := rows.Scan(&i.ProductID, &i.ProductName, &i.TotalSold); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserByUsernameOrEmail = `-- name: GetUserByUsernameOrEmail :one
@@ -444,7 +494,7 @@ type ListUsersRow struct {
 	Email       string           `json:"email"`
 	FullName    string           `json:"full_name"`
 	Role        string           `json:"role"`
-	Permissions []string         `json:"permissions"`
+	Permissions []byte           `json:"permissions"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
@@ -687,8 +737,8 @@ WHERE id = $1
 `
 
 type UpdateUserPermissionsParams struct {
-	ID          int32    `json:"id"`
-	Permissions []string `json:"permissions"`
+	ID          int32  `json:"id"`
+	Permissions []byte `json:"permissions"`
 }
 
 func (q *Queries) UpdateUserPermissions(ctx context.Context, arg UpdateUserPermissionsParams) error {

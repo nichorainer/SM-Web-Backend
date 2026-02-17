@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 
 ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS permissions TEXT[] DEFAULT '{}';
+ADD COLUMN IF NOT EXISTS permissions jsonb;
 
 -- +goose StatementEnd
 
@@ -10,6 +10,6 @@ ALTER TABLE users
 -- +goose StatementBegin
 
 ALTER TABLE users
-  DROP COLUMN IF EXISTS permissions;
+DROP COLUMN IF EXISTS permissions;
 
 -- +goose StatementEnd
