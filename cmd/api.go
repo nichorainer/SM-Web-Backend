@@ -27,7 +27,10 @@ func (app *application) mount() http.Handler {
 	// Allow FE (React dev server) to call BE
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{
+			"http://localhost:5173", 
+			"https://sm-web-inventory.netlify.app",
+		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		AllowCredentials: true,
